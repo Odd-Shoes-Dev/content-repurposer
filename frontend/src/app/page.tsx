@@ -91,9 +91,9 @@ function DrawLineSVG() {
     <svg
       viewBox="0 0 1600 60"
       preserveAspectRatio="none"
-      className="w-screen h-12 hidden md:block"
+      className="hidden md:block h-12"
       fill="none"
-      style={{ display: 'block' }}
+      style={{ display: 'block', width: '100vw', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
     >
       <motion.path
         d="M-800 30 Q-600 5 -400 30 Q-200 55 0 30 Q200 5 400 30 Q600 55 800 30 Q1000 5 1200 30 Q1400 55 1600 30 Q1800 5 2000 30 Q2200 55 2400 30"
