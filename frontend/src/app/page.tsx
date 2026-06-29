@@ -88,22 +88,22 @@ function FloatingShapes() {
 
 function DrawLineSVG() {
   return (
-    <motion.svg
+    <svg
       viewBox="0 0 800 60"
       className="w-full h-12 hidden md:block"
       fill="none"
     >
       <motion.path
-        d="M50 30 Q200 5 400 30 Q600 55 750 30"
+        d="M-400 30 Q-300 5 -200 30 Q-100 55 0 30 Q100 5 200 30 Q300 55 400 30 Q500 5 600 30 Q700 55 800 30 Q900 5 1000 30 Q1100 55 1200 30"
         stroke="#7C6AEF"
         strokeWidth="2"
         strokeLinecap="round"
-        initial={{ pathLength: 0, opacity: 0 }}
-        whileInView={{ pathLength: 1, opacity: 0.3 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.4, ease: 'easeInOut' }}
+        strokeDasharray="180 1600"
+        opacity="0.4"
+        animate={{ strokeDashoffset: [0, -1600] }}
+        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
       />
-    </motion.svg>
+    </svg>
   );
 }
 
@@ -190,38 +190,39 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <motion.section
-        style={{ opacity: heroOpacity }}
-        className="relative pt-32 pb-24 md:pt-44 md:pb-32 overflow-hidden"
-      >
+      <section className="relative pt-32 pb-24 md:pt-44 md:pb-32 overflow-hidden">
         {/* Floating decorative shapes */}
         <FloatingShapes />
 
-        <motion.div
-          className="relative max-w-3xl mx-auto px-6 text-center"
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
-        >
+        <div className="relative max-w-3xl mx-auto px-6 text-center">
           <motion.h1
+            initial="hidden"
+            animate="visible"
             variants={fadeInUp}
+            style={{ opacity: heroOpacity, color: '#2D2A3E' }}
             className="font-[family-name:var(--font-playfair)] text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1]"
-            style={{ color: '#2D2A3E' }}
           >
             Create once,{' '}
             <span style={{ color: '#7C6AEF' }}>publish everywhere</span>
           </motion.h1>
 
           <motion.p
+            initial="hidden"
+            animate="visible"
             variants={fadeInUp}
+            style={{ opacity: heroOpacity, color: '#6B6580' }}
             className="mt-6 text-lg md:text-xl max-w-xl mx-auto leading-relaxed"
-            style={{ color: '#6B6580' }}
           >
             Transform a single piece of content into perfectly crafted posts
             for every platform — powered by AI.
           </motion.p>
 
-          <motion.div variants={fadeInUp} className="mt-10">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+            className="mt-10"
+          >
             <motion.a
               href={ctaHref}
               className="inline-block px-8 py-4 rounded-full text-lg font-medium text-white"
@@ -236,11 +237,17 @@ export default function LandingPage() {
           </motion.div>
 
           {/* Tagline */}
-          <motion.p variants={fadeInUp} className="mt-12 text-sm tracking-wide uppercase" style={{ color: '#E8C4A0', letterSpacing: '0.15em' }}>
+          <motion.p
+            initial="hidden"
+            animate="visible"
+            variants={fadeInUp}
+            style={{ opacity: heroOpacity, color: '#E8C4A0', letterSpacing: '0.15em' }}
+            className="mt-12 text-sm tracking-wide uppercase"
+          >
             All your social media, one source of truth
           </motion.p>
-        </motion.div>
-      </motion.section>
+        </div>
+      </section>
 
       {/* ── How It Works ── */}
       <section className="py-24 md:py-32 relative" style={{ backgroundColor: '#F8F6F3' }}>
