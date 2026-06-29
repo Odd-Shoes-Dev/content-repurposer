@@ -89,19 +89,21 @@ function FloatingShapes() {
 function DrawLineSVG() {
   return (
     <svg
-      viewBox="0 0 800 60"
-      className="w-full h-12 hidden md:block"
+      viewBox="0 0 1600 60"
+      preserveAspectRatio="none"
+      className="w-screen h-12 hidden md:block"
       fill="none"
+      style={{ display: 'block' }}
     >
       <motion.path
-        d="M-400 30 Q-300 5 -200 30 Q-100 55 0 30 Q100 5 200 30 Q300 55 400 30 Q500 5 600 30 Q700 55 800 30 Q900 5 1000 30 Q1100 55 1200 30"
+        d="M-800 30 Q-600 5 -400 30 Q-200 55 0 30 Q200 5 400 30 Q600 55 800 30 Q1000 5 1200 30 Q1400 55 1600 30 Q1800 5 2000 30 Q2200 55 2400 30"
         stroke="#7C6AEF"
         strokeWidth="2"
         strokeLinecap="round"
-        strokeDasharray="180 1600"
+        strokeDasharray="480 2400"
         opacity="0.4"
-        animate={{ strokeDashoffset: [0, -1600] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
+        animate={{ strokeDashoffset: [0, -2400] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
       />
     </svg>
   );
@@ -271,10 +273,18 @@ export default function LandingPage() {
           <motion.p variants={fadeInUp} className="text-center mb-16 max-w-lg mx-auto" style={{ color: '#6B6580' }}>
             Three steps from raw content to platform-ready posts.
           </motion.p>
+        </motion.div>
 
-          <DrawLineSVG />
+        <DrawLineSVG />
 
-          <div className="grid md:grid-cols-3 gap-12 md:gap-8 mt-4">
+        <motion.div
+          className="max-w-5xl mx-auto px-6 mt-4"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={stagger}
+        >
+          <div className="grid md:grid-cols-3 gap-12 md:gap-8">
             {[
               { icon: <PasteIcon />, title: 'Paste', desc: 'Drop in your transcript, article, or any long-form text.', offset: 'md:mt-0' },
               { icon: <SelectIcon />, title: 'Pick', desc: 'Choose which platforms you need content for.', offset: 'md:mt-8' },
