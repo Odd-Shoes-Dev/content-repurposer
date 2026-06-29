@@ -289,24 +289,34 @@ export default function LandingPage() {
               { icon: <PasteIcon />, title: 'Paste', desc: 'Drop in your transcript, article, or any long-form text.', offset: 'md:mt-0' },
               { icon: <SelectIcon />, title: 'Pick', desc: 'Choose which platforms you need content for.', offset: 'md:mt-8' },
               { icon: <PublishIcon />, title: 'Publish', desc: 'Get tailored content instantly. Copy, edit, share.', offset: 'md:mt-0' },
-            ].map((step, i) => (
-              <motion.div
-                key={step.title}
-                variants={fadeInUp}
-                className={`text-center ${step.offset}`}
-              >
-                <div className="flex justify-center mb-5">{step.icon}</div>
-                <h3
-                  className="font-[family-name:var(--font-playfair)] text-xl font-semibold mb-2"
-                  style={{ color: '#2D2A3E' }}
+            ].map((step, i) => {
+              const origins = [
+                { x: -80, y: 60 },
+                { x: 0,   y: 80 },
+                { x: 80,  y: 60 },
+              ];
+              return (
+                <motion.div
+                  key={step.title}
+                  initial={{ opacity: 0, x: origins[i].x, y: origins[i].y }}
+                  whileInView={{ opacity: 1, x: 0, y: 0 }}
+                  viewport={{ once: false, margin: '-60px' }}
+                  transition={{ duration: 0.7, delay: i * 0.1, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] }}
+                  className={`text-center ${step.offset}`}
                 >
-                  {step.title}
-                </h3>
-                <p className="text-sm leading-relaxed max-w-[240px] mx-auto" style={{ color: '#6B6580' }}>
-                  {step.desc}
-                </p>
-              </motion.div>
-            ))}
+                  <div className="flex justify-center mb-5">{step.icon}</div>
+                  <h3
+                    className="font-[family-name:var(--font-playfair)] text-xl font-semibold mb-2"
+                    style={{ color: '#2D2A3E' }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed max-w-[240px] mx-auto" style={{ color: '#6B6580' }}>
+                    {step.desc}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       </section>
