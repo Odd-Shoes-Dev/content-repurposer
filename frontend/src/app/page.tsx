@@ -222,25 +222,17 @@ export default function LandingPage() {
           </motion.p>
 
           <motion.div variants={fadeInUp} className="mt-10">
-            <motion.div
+            <motion.a
+              href={ctaHref}
+              className="inline-block px-8 py-4 rounded-full text-lg font-medium text-white"
               animate={{
-                boxShadow: [
-                  '0 8px 30px rgba(124,106,239,0.15)',
-                  '0 16px 50px rgba(124,106,239,0.4)',
-                  '0 8px 30px rgba(124,106,239,0.15)',
-                  '0 16px 50px rgba(124,106,239,0.4)',
-                ],
+                backgroundColor: ['#7C6AEF', '#5a4bd1', '#7C6AEF', '#5a4bd1'],
               }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.04 }}
             >
-              <Link
-                href={ctaHref}
-                className="inline-block px-8 py-4 rounded-full text-lg font-medium text-white transition-all duration-300 hover:scale-[1.04] hover:shadow-xl"
-                style={{ backgroundColor: '#7C6AEF' }}
-              >
-                Start repurposing — free
-              </Link>
-            </motion.div>
+              Start repurposing — free
+            </motion.a>
           </motion.div>
 
           {/* Tagline */}
