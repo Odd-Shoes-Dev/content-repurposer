@@ -22,6 +22,10 @@ export const authOptions: NextAuthOptions = {
         if (credentials.isSignUp === 'true') {
           const existing = await getDBProvider().getUserByEmail(credentials.email);
           if (existing) {
+            const row = existing as unknown as { deleted_at?: string };
+            if (row.deleted_at) {
+              throw new Error('This email is pending account deletion and cannot be reused yet.');
+            }
             throw new Error('An account with this email already exists');
           }
 
@@ -48,6 +52,16 @@ export const authOptions: NextAuthOptions = {
         const user = await getDBProvider().getUserByEmail(credentials.email);
         if (!user) {
           throw new Error('User not found');
+        }
+
+        // Check for soft-deleted account
+        const rawUser = user as unknown as { deleted_at?: string; scheduled_deletion_at?: string };
+        if (rawUser.deleted_at) {
+          const scheduledDeletion = rawUser.scheduled_deletion_at ? new Date(rawUser.scheduled_deletion_at) : null;
+          if (scheduledDeletion && scheduledDeletion > new Date()) {
+            throw new Error(`ACCOUNT_PENDING_DELETION:${scheduledDeletion.toISOString()}`);
+          }
+          throw new Error('No account found with this email');
         }
 
         return { id: user.id, email: user.email, name: user.name };

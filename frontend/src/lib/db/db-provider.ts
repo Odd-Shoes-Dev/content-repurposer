@@ -43,6 +43,11 @@ export interface DBProvider {
   updateUser(id: string, data: Partial<Pick<User, 'name' | 'theme' | 'defaultFormats' | 'customInstructions' | 'onboardingCompleted'>>): Promise<User>;
   incrementRequestCount(userId: string): Promise<void>;
   resetMonthlyRequests(userId: string): Promise<void>;
+  updateUserEmail(id: string, newEmail: string): Promise<User>;
+  updateUserPassword(id: string, newHash: string): Promise<void>;
+  softDeleteUser(id: string): Promise<void>;
+  reactivateUser(id: string): Promise<void>;
+  getTotalWordCount(userId: string): Promise<number>;
 
   // Content Sources
   createSource(data: CreateSourceInput): Promise<ContentSource>;

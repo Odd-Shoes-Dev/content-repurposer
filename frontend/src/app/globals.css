@@ -3,6 +3,25 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Design tokens — override these to change the theme */
+  --color-brand:          #7C6AEF;
+  --color-brand-dim:      #5a4bd1;
+  --color-accent:         #E8C4A0;
+  --color-bg:             #F8F6F3;
+  --color-bg-subtle:      #F0EDFA;
+  --color-surface:        #ffffff;
+  --color-sidebar-bg:     #1E1B2E;
+  --color-sidebar-text:   #C4BDD8;
+  --color-sidebar-muted:  #7A738F;
+  --color-sidebar-active: #7C6AEF;
+  --color-text-head:      #2D2A3E;
+  --color-text-body:      #6B6580;
+  --color-border:         rgba(124,106,239,0.15);
+  --color-danger:         #dc2626;
+
+  /* Font size scale — controlled by data-font-size on <html> */
+  --font-size-base: 14px;
 }
 
 @theme inline {
@@ -26,3 +45,8 @@ html, body {
   overflow-x: hidden;
   max-width: 100%;
 }
+
+/* Font size preference */
+html[data-font-size="small"]  { font-size: 12px; }
+html[data-font-size="medium"] { font-size: 14px; }
+html[data-font-size="large"]  { font-size: 16px; }

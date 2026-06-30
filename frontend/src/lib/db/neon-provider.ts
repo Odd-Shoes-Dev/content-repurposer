@@ -145,6 +145,43 @@ export class NeonDBProvider implements DBProvider {
     );
   }
 
+  async updateUserEmail(id: string, newEmail: string): Promise<User> {
+    const rows = await this.query(
+      'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [newEmail, id]
+    );
+    return mapUser(rows[0]);
+  }
+
+  async updateUserPassword(id: string, newHash: string): Promise<void> {
+    await this.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [newHash, id]
+    );
+  }
+
+  async softDeleteUser(id: string): Promise<void> {
+    await this.query(
+      `UPDATE users SET deleted_at = NOW(), scheduled_deletion_at = NOW() + INTERVAL '30 days', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+  }
+
+  async reactivateUser(id: string): Promise<void> {
+    await this.query(
+      'UPDATE users SET deleted_at = NULL, scheduled_deletion_at = NULL, updated_at = NOW() WHERE id = $1',
+      [id]
+    );
+  }
+
+  async getTotalWordCount(userId: string): Promise<number> {
+    const rows = await this.query(
+      'SELECT COALESCE(SUM(word_count), 0) as total FROM content_sources WHERE user_id = $1',
+      [userId]
+    );
+    return Number(rows[0]?.total ?? 0);
+  }
+
   async createSource(data: CreateSourceInput): Promise<ContentSource> {
     const rows = await this.query(
       'INSERT INTO content_sources (user_id, title, content, word_count, tone, custom_instructions) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
