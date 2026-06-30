@@ -69,14 +69,18 @@ export default function DashboardPage() {
     return null;
   }
 
+  const MAX_FORMATS = 3;
+
   function toggleFormat(format: OutputFormat) {
-    setSelectedFormats((prev) =>
-      prev.includes(format) ? prev.filter((f) => f !== format) : [...prev, format]
-    );
+    setSelectedFormats((prev) => {
+      if (prev.includes(format)) return prev.filter((f) => f !== format);
+      if (prev.length >= MAX_FORMATS) return prev;
+      return [...prev, format];
+    });
   }
 
   function selectAll() {
-    setSelectedFormats(selectedFormats.length === ALL_FORMATS.length ? [] : [...ALL_FORMATS]);
+    setSelectedFormats([]);
   }
 
   async function handleGenerate() {
@@ -374,38 +378,52 @@ export default function DashboardPage() {
           style={{ backgroundColor: 'white', borderColor: 'rgba(124,106,239,0.12)' }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold" style={{ color: '#2D2A3E' }}>
-              Output Formats
-            </h2>
-            <button
-              onClick={selectAll}
-              className="text-sm hover:opacity-70 transition-opacity"
-              style={{ color: '#7C6AEF' }}
-            >
-              {selectedFormats.length === ALL_FORMATS.length ? 'Deselect All' : 'Select All'}
-            </button>
+            <div>
+              <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold" style={{ color: '#2D2A3E' }}>
+                Output Formats
+              </h2>
+              <p className="text-xs mt-0.5" style={{ color: '#6B6580' }}>
+                {selectedFormats.length}/{MAX_FORMATS} selected
+              </p>
+            </div>
+            {selectedFormats.length > 0 && (
+              <button
+                onClick={selectAll}
+                className="text-sm hover:opacity-70 transition-opacity"
+                style={{ color: '#7C6AEF' }}
+              >
+                Clear
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {ALL_FORMATS.map((format) => (
-              <button
-                key={format}
-                onClick={() => toggleFormat(format)}
-                className="p-4 rounded-xl border-2 text-left transition-all duration-200"
-                style={
-                  selectedFormats.includes(format)
-                    ? { borderColor: '#7C6AEF', backgroundColor: '#F0EDFA' }
-                    : { borderColor: 'rgba(124,106,239,0.15)', backgroundColor: 'transparent' }
-                }
-              >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs mb-2"
-                  style={{ backgroundColor: selectedFormats.includes(format) ? '#7C6AEF' : '#C4BDD8' }}
+            {ALL_FORMATS.map((format) => {
+              const isSelected = selectedFormats.includes(format);
+              const isDisabled = !isSelected && selectedFormats.length >= MAX_FORMATS;
+              return (
+                <button
+                  key={format}
+                  onClick={() => toggleFormat(format)}
+                  disabled={isDisabled}
+                  className="p-4 rounded-xl border-2 text-left transition-all duration-200 disabled:cursor-not-allowed"
+                  style={
+                    isSelected
+                      ? { borderColor: '#7C6AEF', backgroundColor: '#F0EDFA' }
+                      : isDisabled
+                      ? { borderColor: 'rgba(124,106,239,0.08)', backgroundColor: 'transparent', opacity: 0.4 }
+                      : { borderColor: 'rgba(124,106,239,0.15)', backgroundColor: 'transparent' }
+                  }
                 >
-                  {FORMAT_LABELS[format].charAt(0)}
-                </div>
-                <p className="text-xs font-medium" style={{ color: '#2D2A3E' }}>{FORMAT_LABELS[format]}</p>
-              </button>
-            ))}
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs mb-2"
+                    style={{ backgroundColor: isSelected ? '#7C6AEF' : '#C4BDD8' }}
+                  >
+                    {FORMAT_LABELS[format].charAt(0)}
+                  </div>
+                  <p className="text-xs font-medium" style={{ color: '#2D2A3E' }}>{FORMAT_LABELS[format]}</p>
+                </button>
+              );
+            })}
           </div>
         </motion.section>
 

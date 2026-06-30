@@ -206,9 +206,9 @@ export default function HistoryPage() {
                 className="rounded-2xl border overflow-hidden"
                 style={{ backgroundColor: 'white', borderColor: 'rgba(124,106,239,0.12)' }}
               >
-                <button
+                <div
                   onClick={() => setExpandedId(expandedId === source.id ? null : source.id)}
-                  className="w-full px-6 py-4 flex items-center justify-between text-left transition-opacity hover:opacity-80"
+                  className="w-full px-6 py-4 flex items-center justify-between cursor-pointer transition-opacity hover:opacity-80"
                 >
                   <div>
                     <h3 className="font-medium text-sm" style={{ color: '#2D2A3E' }}>{source.title}</h3>
@@ -228,7 +228,7 @@ export default function HistoryPage() {
                       {expandedId === source.id ? '▲' : '▼'}
                     </span>
                   </div>
-                </button>
+                </div>
 
                 <AnimatePresence>
                   {expandedId === source.id && (
