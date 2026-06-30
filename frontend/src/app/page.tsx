@@ -91,9 +91,8 @@ function DrawLineSVG() {
     <svg
       viewBox="0 0 1600 60"
       preserveAspectRatio="none"
-      className="hidden md:block h-12"
+      className="hidden md:block h-12 w-full"
       fill="none"
-      style={{ display: 'block', width: '100vw', position: 'relative', left: '50%', transform: 'translateX(-50%)' }}
     >
       <motion.path
         d="M-800 30 Q-600 5 -400 30 Q-200 55 0 30 Q200 5 400 30 Q600 55 800 30 Q1000 5 1200 30 Q1400 55 1600 30 Q1800 5 2000 30 Q2200 55 2400 30"
@@ -158,7 +157,10 @@ export default function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, []);
 
   useEffect(() => {
@@ -186,7 +188,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href={ctaHref}
-              className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-lg"
+              className="hidden sm:inline-block px-5 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-300 hover:scale-[1.03] hover:shadow-lg"
               style={{ backgroundColor: '#7C6AEF' }}
             >
               {session ? 'Dashboard' : 'Get Started'}
@@ -256,7 +258,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Works ── */}
-      <section className="py-24 md:py-32 relative" style={{ backgroundColor: '#F8F6F3' }}>
+      <section className="py-24 md:py-32 relative overflow-hidden" style={{ backgroundColor: '#F8F6F3' }}>
         <HexagonSVG className="absolute top-8 right-[5%] w-40" style={{ color: '#7C6AEF' }} />
         <KiteSVG className="absolute bottom-12 left-[3%] w-20" style={{ color: '#E8C4A0' }} />
 
@@ -407,7 +409,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Feature: History ── */}
-      <section className="py-24 md:py-32 relative" style={{ backgroundColor: '#F8F6F3' }}>
+      <section className="py-24 md:py-32 relative overflow-hidden" style={{ backgroundColor: '#F8F6F3' }}>
         <HexagonSVG className="absolute bottom-8 right-[4%] w-36" style={{ color: '#E8C4A0' }} />
 
         <motion.div
@@ -468,7 +470,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Stats Bar ── */}
-      <section className="py-16 md:py-20">
+      <section className="py-16 md:py-20 overflow-hidden">
         <motion.div
           className="max-w-4xl mx-auto px-6 grid grid-cols-3 gap-8 text-center"
           initial="hidden"
@@ -495,7 +497,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="py-24 md:py-32 relative" style={{ backgroundColor: '#F0EDFA' }}>
+      <section className="py-24 md:py-32 relative overflow-hidden" style={{ backgroundColor: '#F0EDFA' }}>
         <HexagonSVG className="absolute top-10 left-[8%] w-28" style={{ color: '#7C6AEF' }} />
         <KiteSVG className="absolute bottom-10 right-[6%] w-20" style={{ color: '#E8C4A0' }} />
 
