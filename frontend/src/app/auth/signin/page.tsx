@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -18,7 +19,6 @@ export default function SignInPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const result = await signIn('credentials', {
         redirect: false,
@@ -27,7 +27,6 @@ export default function SignInPage() {
         name: isSignUp ? name : undefined,
         isSignUp: isSignUp ? 'true' : 'false',
       });
-
       if (result?.error) {
         setError(result.error);
       } else {
@@ -41,101 +40,151 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">
-            Content Repurposer
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
-          </p>
-        </div>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8F6F3', color: '#2D2A3E' }}>
+      {/* Nav */}
+      <nav className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
+        <Link
+          href="/"
+          className="font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-tight"
+          style={{ color: '#2D2A3E' }}
+        >
+          Repurposer
+        </Link>
+      </nav>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {isSignUp && (
+      {/* Form */}
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] }}
+          className="w-full max-w-md"
+        >
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1
+              className="font-[family-name:var(--font-playfair)] text-3xl md:text-4xl font-bold tracking-tight mb-2"
+              style={{ color: '#2D2A3E' }}
+            >
+              {isSignUp ? 'Create account' : 'Welcome back'}
+            </h1>
+            <p className="text-sm" style={{ color: '#6B6580' }}>
+              {isSignUp ? 'Start repurposing your content today' : 'Sign in to continue repurposing'}
+            </p>
+          </div>
+
+          {/* Card */}
+          <div
+            className="rounded-2xl p-8 border"
+            style={{ backgroundColor: 'white', borderColor: 'rgba(124,106,239,0.15)' }}
+          >
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {isSignUp && (
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium mb-1.5" style={{ color: '#2D2A3E' }}>
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition"
+                    style={{
+                      borderColor: 'rgba(124,106,239,0.2)',
+                      backgroundColor: '#F8F6F3',
+                      color: '#2D2A3E',
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = '#7C6AEF')}
+                    onBlur={(e) => (e.target.style.borderColor = 'rgba(124,106,239,0.2)')}
+                    placeholder="Your name"
+                    required
+                  />
+                </div>
+              )}
+
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Name
+                <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: '#2D2A3E' }}>
+                  Email
                 </label>
                 <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-                  placeholder="Your name"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition"
+                  style={{
+                    borderColor: 'rgba(124,106,239,0.2)',
+                    backgroundColor: '#F8F6F3',
+                    color: '#2D2A3E',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = '#7C6AEF')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(124,106,239,0.2)')}
+                  placeholder="you@example.com"
                   required
                 />
               </div>
-            )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium mb-1.5" style={{ color: '#2D2A3E' }}>
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition"
+                  style={{
+                    borderColor: 'rgba(124,106,239,0.2)',
+                    backgroundColor: '#F8F6F3',
+                    color: '#2D2A3E',
+                  }}
+                  onFocus={(e) => (e.target.style.borderColor = '#7C6AEF')}
+                  onBlur={(e) => (e.target.style.borderColor = 'rgba(124,106,239,0.2)')}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                />
+              </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-sm text-center px-3 py-2 rounded-xl"
+                  style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#dc2626' }}
+                >
+                  {error}
+                </motion.p>
+              )}
 
-            {error && (
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-red-500 text-sm text-center"
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-full text-sm font-medium text-white transition-all duration-300 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#7C6AEF' }}
               >
-                {error}
-              </motion.p>
-            )}
+                {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
+              </button>
+            </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-medium rounded-xl hover:from-violet-700 hover:to-indigo-700 focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-              className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+                className="text-sm transition-opacity hover:opacity-70"
+                style={{ color: '#7C6AEF' }}
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            </div>
           </div>
-        </div>
-      </motion.div>
+
+          <p className="text-center mt-6 text-xs" style={{ color: '#6B6580' }}>
+            <Link href="/" className="hover:opacity-70 transition-opacity">← Back to home</Link>
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }
