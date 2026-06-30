@@ -364,7 +364,15 @@ export default function LandingPage() {
 
           <motion.div variants={fadeInUp} className="relative">
             {/* SVG mockup of streaming output */}
-            <div
+            <motion.div
+              animate={{ y: [0, -22, 0] }}
+              transition={{
+                duration: 1.9,
+                repeat: Infinity,
+                repeatDelay: 1.4,
+                times: [0, 0.55, 1],
+                ease: ['easeOut', 'easeIn'],
+              }}
               className="rounded-2xl p-6 border relative overflow-hidden"
               style={{ backgroundColor: '#F0EDFA', borderColor: 'rgba(124,106,239,0.15)' }}
             >
@@ -393,7 +401,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <HexagonSVG className="absolute -bottom-6 -right-6 w-20" style={{ color: '#7C6AEF' }} />
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       </section>
