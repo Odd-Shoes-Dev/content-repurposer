@@ -6,11 +6,11 @@ export const config = {
   nextAuthUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
   defaultModel: process.env.DEFAULT_AI_MODEL || 'llama-3.3-70b-versatile',
   maxTokens: parseInt(process.env.MAX_TOKENS || '16000', 10),
-  freeMonthlyRequests: 3,
+  freeMonthlyRequests: 100,
   plans: {
-    free: { monthlyRequests: 3 },
-    basic: { monthlyRequests: 50 },
-    pro: { monthlyRequests: 200 },
-    agency: { monthlyRequests: 1000 },
+    free: { monthlyRequests: 100 },
+    basic: { monthlyRequests: 500 },
+    pro: { monthlyRequests: 2000 },
+    agency: { monthlyRequests: 10000 },
   },
 } as const;

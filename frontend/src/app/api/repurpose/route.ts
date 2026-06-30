@@ -4,7 +4,6 @@ import { getAIProvider } from '@/lib/ai';
 import { getDBProvider } from '@/lib/db';
 import { buildPrompt } from '@/lib/prompts/prompt-builder';
 import { getDefaultTemplate } from '@/lib/prompts/format-prompts';
-import { config } from '@/lib/config';
 import { rateLimit } from '@/lib/rate-limit';
 import type { OutputFormat, Tone } from '@/types';
 
@@ -45,15 +44,6 @@ export async function POST(request: Request) {
   const user = await db.getUserById(userId);
   if (!user) {
     return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
-  }
-
-  const planLimits = config.plans[user.plan];
-  if (user.monthlyRequestsResetAt < new Date()) {
-    await db.resetMonthlyRequests(userId);
-    user.monthlyRequestsUsed = 0;
-  }
-  if (user.monthlyRequestsUsed >= planLimits.monthlyRequests) {
-    return new Response(JSON.stringify({ error: 'Monthly request limit reached. Please upgrade your plan.' }), { status: 429 });
   }
 
   const wordCount = content.trim().split(/\s+/).length;
