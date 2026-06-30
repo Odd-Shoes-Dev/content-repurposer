@@ -42,6 +42,12 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const MAX_FORMATS = 3;
+
+  const copyToClipboard = useCallback(async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    toast('Copied to clipboard!', 'success');
+  }, [toast]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -159,11 +165,6 @@ export default function DashboardPage() {
     setGenerating(false);
     toast('Generation stopped', 'info');
   }
-
-  const copyToClipboard = useCallback(async (text: string) => {
-    await navigator.clipboard.writeText(text);
-    toast('Copied to clipboard!', 'success');
-  }, [toast]);
 
   function handleRate(format: OutputFormat, rating: 'up' | 'down') {
     setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, rating: o.rating === rating ? null : rating } : o)));
