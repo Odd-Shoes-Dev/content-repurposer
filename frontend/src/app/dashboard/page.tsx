@@ -75,8 +75,6 @@ export default function DashboardPage() {
     return null;
   }
 
-  const MAX_FORMATS = 3;
-
   function toggleFormat(format: OutputFormat) {
     setSelectedFormats((prev) => {
       if (prev.includes(format)) return prev.filter((f) => f !== format);
