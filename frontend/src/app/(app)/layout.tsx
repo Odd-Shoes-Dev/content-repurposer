@@ -75,6 +75,16 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           }
         />
         <NavItem
+          href="/billing" label="Billing" active={pathname === '/billing'}
+          onClick={onClose}
+          icon={
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+              <line x1="1" y1="10" x2="23" y2="10" />
+            </svg>
+          }
+        />
+        <NavItem
           href="/settings" label="Settings" active={pathname === '/settings'}
           onClick={onClose}
           icon={
