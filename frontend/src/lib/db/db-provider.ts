@@ -8,6 +8,28 @@ import type {
   Rating,
 } from '@/types';
 
+export interface Subscription {
+  id: string;
+  userId: string;
+  plan: string;
+  status: 'active' | 'cancelled' | 'expired';
+  provider: string;
+  providerMembershipId: string | null;
+  providerPlanId: string | null;
+  activatedAt: Date;
+  cancelledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface UpsertSubscriptionInput {
+  userId: string;
+  plan: string;
+  provider?: string;
+  providerMembershipId?: string;
+  providerPlanId?: string;
+}
+
 export interface CreateUserInput {
   email: string;
   name: string;
@@ -49,9 +71,15 @@ export interface DBProvider {
   reactivateUser(id: string): Promise<void>;
   getTotalWordCount(userId: string): Promise<number>;
 
+  // Subscriptions (separate table — never written by user-facing routes)
+  getActiveSubscription(userId: string): Promise<Subscription | null>;
+  upsertSubscription(data: UpsertSubscriptionInput): Promise<Subscription>;
+  deactivateSubscription(userId: string): Promise<void>;
+  getSubscriptionByMembershipId(membershipId: string): Promise<Subscription | null>;
+
   // Content Sources
   createSource(data: CreateSourceInput): Promise<ContentSource>;
-  getSourcesByUser(userId: string, limit?: number, offset?: number): Promise<ContentSource[]>;
+  getSourcesByUser(userId: string, limit?: number, offset?: number, since?: Date | null): Promise<ContentSource[]>;
   getSourceById(id: string): Promise<ContentSource | null>;
   deleteSource(id: string): Promise<void>;
 

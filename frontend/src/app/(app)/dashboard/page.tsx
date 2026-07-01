@@ -5,11 +5,11 @@ import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/toast';
 import { sanitize } from '@/lib/sanitize';
+import { config } from '@/lib/config';
 import type { OutputFormat, Tone } from '@/types';
 import { FORMAT_LABELS, FORMAT_CHAR_LIMITS } from '@/types';
 
 const ALL_FORMATS = Object.keys(FORMAT_LABELS) as OutputFormat[];
-const MAX_FORMATS = 3;
 const MAX_CONTENT = 50000;
 const MAX_TITLE = 120;
 const MAX_INSTRUCTIONS = 300;
@@ -74,6 +74,9 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string } | null>(null);
+  const [planKey, setPlanKey] = useState<keyof typeof config.plans>('free');
+
+  const maxFormats = config.plans[planKey].maxFormatsPerRun;
 
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -86,15 +89,24 @@ export default function DashboardPage() {
     }
   }, [content]);
 
-  // Load stats
+  // Load stats + plan in parallel
   useEffect(() => {
-    fetch('/api/stats').then(r => r.json()).then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string }) => {
-      setStats({
-        wordCount: data.wordCount ?? 0,
-        totalOutputs: data.totalOutputs ?? 0,
-        topPlatform: data.topPlatform ?? '—',
-      });
-    }).catch(() => {});
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string }) => {
+        setStats({
+          wordCount: data.wordCount ?? 0,
+          totalOutputs: data.totalOutputs ?? 0,
+          topPlatform: data.topPlatform ?? '—',
+        });
+      }).catch(() => {});
+
+    fetch('/api/payments/subscription')
+      .then(r => r.ok ? r.json() as Promise<{ plan: string }> : Promise.resolve({ plan: 'free' }))
+      .then(d => {
+        const key = d.plan as keyof typeof config.plans;
+        setPlanKey(key in config.plans ? key : 'free');
+      }).catch(() => {});
   }, []);
 
   // Ctrl+Enter to generate
@@ -129,7 +141,7 @@ export default function DashboardPage() {
   function toggleFormat(format: OutputFormat) {
     setSelectedFormats((prev) => {
       if (prev.includes(format)) return prev.filter((f) => f !== format);
-      if (prev.length >= MAX_FORMATS) return prev;
+      if (prev.length >= maxFormats) return prev;
       return [...prev, format];
     });
   }
@@ -439,7 +451,12 @@ export default function DashboardPage() {
                 Output Formats
               </h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-body)' }}>
-                Select up to {MAX_FORMATS} · {selectedFormats.length}/{MAX_FORMATS} chosen
+                Select up to {maxFormats} · {selectedFormats.length}/{maxFormats} chosen
+                {selectedFormats.length >= maxFormats && planKey !== 'pro' && planKey !== 'agency' && (
+                  <a href="/settings" className="ml-2 underline" style={{ color: 'var(--color-brand)' }}>
+                    Upgrade for more
+                  </a>
+                )}
               </p>
             </div>
             {selectedFormats.length > 0 && (
@@ -451,7 +468,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {ALL_FORMATS.map((format) => {
               const isSelected = selectedFormats.includes(format);
-              const isDisabled = !isSelected && selectedFormats.length >= MAX_FORMATS;
+              const isDisabled = !isSelected && selectedFormats.length >= maxFormats;
               return (
                 <button
                   key={format}

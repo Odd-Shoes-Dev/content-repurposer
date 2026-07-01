@@ -5,6 +5,7 @@ import { getDBProvider } from '@/lib/db';
 import { buildPrompt } from '@/lib/prompts/prompt-builder';
 import { getDefaultTemplate } from '@/lib/prompts/format-prompts';
 import { rateLimit } from '@/lib/rate-limit';
+import { config } from '@/lib/config';
 import type { OutputFormat, Tone } from '@/types';
 
 export async function POST(request: Request) {
@@ -44,6 +45,28 @@ export async function POST(request: Request) {
   const user = await db.getUserById(userId);
   if (!user) {
     return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
+  }
+
+  // Read plan from subscriptions table (never from user-editable rows)
+  const subscription = await db.getActiveSubscription(userId);
+  const rawPlan = subscription?.plan ?? 'free';
+  const planKey = (rawPlan in config.plans ? rawPlan : 'free') as keyof typeof config.plans;
+  const planCfg = config.plans[planKey];
+
+  // Enforce monthly repurpose limit
+  if (user.monthlyRequestsUsed >= planCfg.monthlyRequests) {
+    return new Response(
+      JSON.stringify({ error: `Monthly limit reached for the ${planCfg.label} plan. Upgrade to continue.` }),
+      { status: 429 }
+    );
+  }
+
+  // Enforce formats-per-run limit
+  if (formats.length > planCfg.maxFormatsPerRun) {
+    return new Response(
+      JSON.stringify({ error: `Your ${planCfg.label} plan allows up to ${planCfg.maxFormatsPerRun} formats per run. Upgrade to select more.` }),
+      { status: 403 }
+    );
   }
 
   const wordCount = content.trim().split(/\s+/).length;

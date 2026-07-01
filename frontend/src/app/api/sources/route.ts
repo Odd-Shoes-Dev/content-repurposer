@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getDBProvider } from '@/lib/db';
+import { config } from '@/lib/config';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -11,7 +12,16 @@ export async function GET() {
   const userId = (session.user as { id: string }).id;
   const db = getDBProvider();
 
-  const sources = await db.getSourcesByUser(userId, 50);
+  // Apply history retention window based on plan
+  const subscription = await db.getActiveSubscription(userId);
+  const rawPlan = subscription?.plan ?? 'free';
+  const planKey = (rawPlan in config.plans ? rawPlan : 'free') as keyof typeof config.plans;
+  const historyDays = config.plans[planKey].historyDays;
+  const since = historyDays > 0
+    ? new Date(Date.now() - historyDays * 24 * 60 * 60 * 1000)
+    : null;
+
+  const sources = await db.getSourcesByUser(userId, 200, 0, since);
 
   const sourcesWithOutputs = await Promise.all(
     sources.map(async (source) => {

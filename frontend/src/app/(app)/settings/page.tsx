@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { config } from '@/lib/config';
+import type { PlanKey } from '@/lib/payments';
 
 type FontSize = 'small' | 'medium' | 'large';
 
@@ -34,7 +37,17 @@ function StatusMsg({ msg, type }: { msg: string; type: 'success' | 'error' }) {
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession();
+  const searchParams = useSearchParams();
   const user = session?.user as { id?: string; name?: string; email?: string } | undefined;
+
+  // Subscription plan — fetched from /api/payments/subscription, not session
+  const [currentPlan, setCurrentPlan] = useState<string>('free');
+  useEffect(() => {
+    fetch('/api/payments/subscription')
+      .then(r => r.ok ? r.json() as Promise<{ plan: string }> : Promise.resolve({ plan: 'free' }))
+      .then(d => setCurrentPlan(d.plan))
+      .catch(() => {});
+  }, []);
 
   // Name
   const [name, setName] = useState(user?.name ?? '');
@@ -56,6 +69,12 @@ export default function SettingsPage() {
 
   // Font size
   const [fontSize, setFontSize] = useState<FontSize>('medium');
+
+  // Billing
+  const [checkoutLoading, setCheckoutLoading] = useState<PlanKey | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(
+    (searchParams.get('payment') as 'success' | 'cancelled' | null) ?? null
+  );
 
   // Delete
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -134,6 +153,27 @@ export default function SettingsPage() {
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
     } catch { setPwStatus({ msg: 'Something went wrong', type: 'error' }); }
     finally { setSavingPw(false); }
+  }
+
+  async function startCheckout(planKey: PlanKey) {
+    setCheckoutLoading(planKey);
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planKey }),
+      });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        alert(data.error ?? 'Could not start checkout. Please try again.');
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setCheckoutLoading(null);
+    }
   }
 
   async function deleteAccount() {
@@ -272,8 +312,102 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* Danger zone */}
+        {/* Billing section */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18 }}
+          className="rounded-sm border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+          <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-head)' }}>Billing &amp; Plan</h2>
+          </div>
+          <div className="px-6 py-5">
+            {/* Payment success / cancelled banner */}
+            <AnimatePresence>
+              {paymentStatus === 'success' && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="mb-4 px-4 py-3 rounded-sm text-sm flex items-center justify-between"
+                  style={{ backgroundColor: 'rgba(22,163,74,0.08)', color: '#16a34a' }}>
+                  <span>Payment successful! Your plan has been upgraded.</span>
+                  <button onClick={() => setPaymentStatus(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+                </motion.div>
+              )}
+              {paymentStatus === 'cancelled' && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="mb-4 px-4 py-3 rounded-sm text-sm flex items-center justify-between"
+                  style={{ backgroundColor: 'rgba(220,38,38,0.06)', color: 'var(--color-danger)' }}>
+                  <span>Checkout was cancelled.</span>
+                  <button onClick={() => setPaymentStatus(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Current plan */}
+            <p className="text-xs mb-4" style={{ color: 'var(--color-text-body)' }}>
+              Current plan: <span className="font-semibold capitalize" style={{ color: 'var(--color-text-head)' }}>
+                {currentPlan}
+              </span>
+            </p>
+
+            {/* Plan cards */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {((['free', 'basic', 'pro', 'agency'] as PlanKey[])).map((planKey) => {
+                const plan = config.plans[planKey];
+                const isCurrent = currentPlan === planKey;
+                const isLoading = checkoutLoading === planKey;
+                return (
+                  <div key={planKey} className="rounded-sm border p-4 flex flex-col gap-3 relative"
+                    style={{
+                      borderColor: isCurrent ? 'var(--color-brand)' : 'var(--color-border)',
+                      borderLeftWidth: isCurrent ? '3px' : '1px',
+                      backgroundColor: isCurrent ? 'var(--color-bg-subtle)' : 'transparent',
+                    }}>
+                    {isCurrent && (
+                      <span className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-sm font-medium"
+                        style={{ backgroundColor: 'var(--color-brand)', color: '#fff' }}>
+                        Current
+                      </span>
+                    )}
+                    <div>
+                      <p className="font-semibold text-sm" style={{ color: 'var(--color-text-head)' }}>{plan.label}</p>
+                      <p className="text-xl font-bold font-[family-name:var(--font-playfair)] mt-0.5" style={{ color: 'var(--color-text-head)' }}>
+                        {plan.price === 0 ? 'Free' : `$${plan.price}`}
+                        {plan.price > 0 && <span className="text-xs font-normal" style={{ color: 'var(--color-text-body)' }}>/mo</span>}
+                      </p>
+                    </div>
+                    <ul className="space-y-1">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-start gap-1.5 text-xs" style={{ color: 'var(--color-text-body)' }}>
+                          <svg className="w-3 h-3 mt-0.5 flex-shrink-0" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="var(--color-brand)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {planKey !== 'free' && (
+                      <button
+                        onClick={() => startCheckout(planKey)}
+                        disabled={isCurrent || isLoading}
+                        className="mt-auto py-2 rounded-sm text-xs font-medium transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{
+                          backgroundColor: isCurrent ? 'transparent' : 'var(--color-brand)',
+                          color: isCurrent ? 'var(--color-text-body)' : '#fff',
+                          border: isCurrent ? '1px solid var(--color-border)' : 'none',
+                        }}>
+                        {isLoading ? 'Loading...' : isCurrent ? 'Active' : 'Upgrade'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-xs mt-4" style={{ color: 'var(--color-text-body)' }}>
+              Payments are processed securely by Whop. You can cancel anytime from your Whop dashboard.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* Danger zone */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}
           className="rounded-sm border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'rgba(220,38,38,0.2)' }}>
           <div className="px-6 py-4 border-b" style={{ borderColor: 'rgba(220,38,38,0.15)' }}>
             <h2 className="text-sm font-semibold" style={{ color: 'var(--color-danger)' }}>Danger Zone</h2>

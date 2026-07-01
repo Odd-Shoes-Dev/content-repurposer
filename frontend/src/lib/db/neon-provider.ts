@@ -1,5 +1,5 @@
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
-import type { DBProvider, CreateUserInput, CreateSourceInput, CreateOutputInput } from './db-provider';
+import type { DBProvider, CreateUserInput, CreateSourceInput, CreateOutputInput, Subscription, UpsertSubscriptionInput } from './db-provider';
 import type {
   User,
   ContentSource,
@@ -58,6 +58,22 @@ function mapOutput(row: Row): GeneratedOutput {
     isFavorite: row.is_favorite as boolean,
     rating: row.rating as Rating,
     createdAt: new Date(row.created_at as string),
+  };
+}
+
+function mapSubscription(row: Row): Subscription {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    plan: row.plan as string,
+    status: row.status as Subscription['status'],
+    provider: row.provider as string,
+    providerMembershipId: (row.provider_membership_id as string) ?? null,
+    providerPlanId: (row.provider_plan_id as string) ?? null,
+    activatedAt: new Date(row.activated_at as string),
+    cancelledAt: row.cancelled_at ? new Date(row.cancelled_at as string) : null,
+    createdAt: new Date(row.created_at as string),
+    updatedAt: new Date(row.updated_at as string),
   };
 }
 
@@ -174,6 +190,60 @@ export class NeonDBProvider implements DBProvider {
     );
   }
 
+  async getActiveSubscription(userId: string): Promise<Subscription | null> {
+    const rows = await this.query(
+      `SELECT * FROM subscriptions WHERE user_id = $1 AND status = 'active' LIMIT 1`,
+      [userId]
+    );
+    return rows.length > 0 ? mapSubscription(rows[0]) : null;
+  }
+
+  async upsertSubscription(data: UpsertSubscriptionInput): Promise<Subscription> {
+    // Deactivate any existing active subscription first, then insert the new one.
+    // This preserves history while ensuring the unique index on (user_id WHERE active) holds.
+    await this.query(
+      `UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW()
+       WHERE user_id = $1 AND status = 'active'`,
+      [data.userId]
+    );
+    const rows = await this.query(
+      `INSERT INTO subscriptions
+         (user_id, plan, status, provider, provider_membership_id, provider_plan_id, activated_at)
+       VALUES ($1, $2, 'active', $3, $4, $5, NOW())
+       RETURNING *`,
+      [
+        data.userId,
+        data.plan,
+        data.provider ?? 'whop',
+        data.providerMembershipId ?? null,
+        data.providerPlanId ?? null,
+      ]
+    );
+    return mapSubscription(rows[0]);
+  }
+
+  async deactivateSubscription(userId: string): Promise<void> {
+    await this.query(
+      `UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW(), updated_at = NOW()
+       WHERE user_id = $1 AND status = 'active'`,
+      [userId]
+    );
+    // Insert a new free-tier row so the user always has an active subscription record
+    await this.query(
+      `INSERT INTO subscriptions (user_id, plan, status, provider)
+       VALUES ($1, 'free', 'active', 'whop')`,
+      [userId]
+    );
+  }
+
+  async getSubscriptionByMembershipId(membershipId: string): Promise<Subscription | null> {
+    const rows = await this.query(
+      `SELECT * FROM subscriptions WHERE provider_membership_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [membershipId]
+    );
+    return rows.length > 0 ? mapSubscription(rows[0]) : null;
+  }
+
   async getTotalWordCount(userId: string): Promise<number> {
     const rows = await this.query(
       'SELECT COALESCE(SUM(word_count), 0) as total FROM content_sources WHERE user_id = $1',
@@ -190,7 +260,14 @@ export class NeonDBProvider implements DBProvider {
     return mapSource(rows[0]);
   }
 
-  async getSourcesByUser(userId: string, limit = 20, offset = 0): Promise<ContentSource[]> {
+  async getSourcesByUser(userId: string, limit = 20, offset = 0, since: Date | null = null): Promise<ContentSource[]> {
+    if (since) {
+      const rows = await this.query(
+        'SELECT * FROM content_sources WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4',
+        [userId, since.toISOString(), limit, offset]
+      );
+      return rows.map(mapSource);
+    }
     const rows = await this.query(
       'SELECT * FROM content_sources WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
       [userId, limit, offset]
