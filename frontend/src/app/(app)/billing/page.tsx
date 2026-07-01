@@ -149,7 +149,7 @@ export default function BillingPage() {
                     <button
                       onClick={() => startCheckout(planKey)}
                       disabled={isCurrent || isLoading}
-                      className="w-full py-2.5 rounded-sm text-sm font-medium transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="w-full py-2.5 rounded-sm text-sm font-medium transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       style={{
                         backgroundColor: isCurrent ? 'transparent' : 'var(--color-brand)',
                         color: isCurrent ? 'var(--color-text-body)' : '#fff',

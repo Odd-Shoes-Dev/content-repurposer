@@ -64,9 +64,11 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    const stored = (localStorage.getItem('fontSize') as FontSize) || 'medium';
-    setFontSize(stored);
-    document.documentElement.setAttribute('data-font-size', stored);
+    const stored = localStorage.getItem('fontSize') as FontSize | null;
+    if (stored) {
+      setFontSize(stored);
+      document.documentElement.setAttribute('data-font-size', stored);
+    }
   }, []);
 
   useEffect(() => {
