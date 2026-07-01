@@ -8,6 +8,7 @@ import { sanitize } from '@/lib/sanitize';
 import { config } from '@/lib/config';
 import type { OutputFormat, Tone } from '@/types';
 import { FORMAT_LABELS, FORMAT_CHAR_LIMITS } from '@/types';
+import { VARIATION_SEP, MULTI_VARIATION_FORMATS } from '@/lib/prompts/format-prompts';
 
 const ALL_FORMATS = Object.keys(FORMAT_LABELS) as OutputFormat[];
 const MAX_CONTENT = 50000;
@@ -23,8 +24,10 @@ const TONES: { value: Tone; label: string; desc: string }[] = [
 
 interface OutputState {
   format: OutputFormat;
-  content: string;
-  editedContent: string | null;
+  content: string;           // raw accumulated streaming text
+  variations: string[];      // split from content after done
+  activeVariation: number;
+  editedVariations: (string | null)[];
   status: 'pending' | 'streaming' | 'done' | 'error';
   error?: string;
   rating: 'up' | 'down' | null;
@@ -73,6 +76,7 @@ export default function DashboardPage() {
   const [outputs, setOutputs] = useState<OutputState[]>([]);
   const [generating, setGenerating] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string } | null>(null);
   const [planKey, setPlanKey] = useState<keyof typeof config.plans>('free');
 
@@ -153,8 +157,10 @@ export default function DashboardPage() {
     if (!canGenerate) return;
     setGenerating(true);
     setSourceId(null);
+    setLimitError(null);
     setOutputs(selectedFormats.map((f) => ({
-      format: f, content: '', editedContent: null, status: 'pending', rating: null, isEditing: false,
+      format: f, content: '', variations: [], activeVariation: 0, editedVariations: [],
+      status: 'pending', rating: null, isEditing: false,
     })));
 
     const controller = new AbortController();
@@ -176,8 +182,14 @@ export default function DashboardPage() {
 
       if (!res.ok) {
         const err = await res.json() as { error?: string };
-        toast(err.error || 'Generation failed', 'error');
-        setOutputs((prev) => prev.map((o) => ({ ...o, status: 'error', error: err.error })));
+        const isLimit = res.status === 429 || (err.error ?? '').toLowerCase().includes('limit');
+        if (isLimit) {
+          setLimitError(err.error ?? 'Monthly limit reached. Upgrade to continue.');
+          setOutputs([]);
+        } else {
+          toast(err.error || 'Generation failed', 'error');
+          setOutputs((prev) => prev.map((o) => ({ ...o, status: 'error', error: err.error })));
+        }
         setGenerating(false);
         return;
       }
@@ -205,7 +217,14 @@ export default function DashboardPage() {
             } else if (eventType === 'text') {
               setOutputs((prev) => prev.map((o) => o.format === data.format ? { ...o, content: o.content + (data.text ?? '') } : o));
             } else if (eventType === 'format-done') {
-              setOutputs((prev) => prev.map((o) => (o.format === data.format ? { ...o, status: 'done' } : o)));
+              setOutputs((prev) => prev.map((o) => {
+                if (o.format !== data.format) return o;
+                const isMulti = MULTI_VARIATION_FORMATS.includes(o.format);
+                const variations = isMulti
+                  ? o.content.split(VARIATION_SEP).map(v => v.trim()).filter(Boolean)
+                  : [o.content.trim()];
+                return { ...o, status: 'done', variations, editedVariations: variations.map(() => null) };
+              }));
             } else if (eventType === 'error') {
               setOutputs((prev) => prev.map((o) => o.format === data.format ? { ...o, status: 'error', error: data.error } : o));
             } else if (eventType === 'complete') {
@@ -240,17 +259,26 @@ export default function DashboardPage() {
     setOutputs((prev) => prev.map((o) => {
       if (o.format !== format) return o;
       if (o.isEditing) { toast('Changes saved', 'success'); return { ...o, isEditing: false }; }
-      return { ...o, isEditing: true, editedContent: o.editedContent ?? o.content };
+      return { ...o, isEditing: true };
     }));
   }
 
   function updateEditContent(format: OutputFormat, text: string) {
-    setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, editedContent: text } : o)));
+    setOutputs((prev) => prev.map((o) => {
+      if (o.format !== format) return o;
+      const edited = [...o.editedVariations];
+      edited[o.activeVariation] = text;
+      return { ...o, editedVariations: edited };
+    }));
+  }
+
+  function setActiveVariation(format: OutputFormat, idx: number) {
+    setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, activeVariation: idx, isEditing: false } : o)));
   }
 
   async function handleRegenerate(format: OutputFormat) {
     if (!sourceId) { toast('No source available for regeneration', 'error'); return; }
-    setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, content: '', editedContent: null, status: 'streaming', isEditing: false, rating: null } : o)));
+    setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, content: '', variations: [], activeVariation: 0, editedVariations: [], status: 'streaming', isEditing: false, rating: null } : o)));
 
     try {
       const res = await fetch('/api/outputs', {
@@ -279,7 +307,14 @@ export default function DashboardPage() {
           else if (line.startsWith('data: ')) {
             const data = JSON.parse(line.slice(6)) as { text?: string; error?: string };
             if (eventType === 'text') setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, content: o.content + (data.text ?? '') } : o)));
-            else if (eventType === 'done') setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, status: 'done' } : o)));
+            else if (eventType === 'done') setOutputs((prev) => prev.map((o) => {
+              if (o.format !== format) return o;
+              const isMulti = MULTI_VARIATION_FORMATS.includes(o.format);
+              const variations = isMulti
+                ? o.content.split(VARIATION_SEP).map(v => v.trim()).filter(Boolean)
+                : [o.content.trim()];
+              return { ...o, status: 'done', variations, editedVariations: variations.map(() => null) };
+            }));
             else if (eventType === 'error') setOutputs((prev) => prev.map((o) => (o.format === format ? { ...o, status: 'error', error: data.error } : o)));
           }
         }
@@ -294,7 +329,10 @@ export default function DashboardPage() {
   function exportAll() {
     const done = outputs.filter((o) => o.status === 'done');
     if (!done.length) return;
-    const md = done.map((o) => `# ${FORMAT_LABELS[o.format]}\n\n${o.editedContent ?? o.content}`).join('\n\n---\n\n');
+    const md = done.map((o) => {
+      const v = o.editedVariations[o.activeVariation] ?? o.variations[o.activeVariation] ?? o.content;
+      return `# ${FORMAT_LABELS[o.format]}\n\n${v}`;
+    }).join('\n\n---\n\n');
     const blob = new Blob([md], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -308,7 +346,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-head)' }}>
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-7">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-7">
 
         {/* Welcome header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -319,7 +357,7 @@ export default function DashboardPage() {
             What would you like to repurpose today?
           </p>
           {stats && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 xs:grid-cols-3 gap-2 sm:gap-3">
               <StatsCard
                 label="Words generated"
                 value={stats.wordCount.toLocaleString()}
@@ -539,6 +577,50 @@ export default function DashboardPage() {
           <span className="text-xs" style={{ color: 'var(--color-text-body)' }}>Ctrl+Enter</span>
         </div>
 
+        {/* Limit banner */}
+        <AnimatePresence>
+          {limitError && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="rounded-sm border px-4 sm:px-5 py-4 sm:py-5 relative"
+              style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', borderLeftWidth: '3px', borderLeftColor: 'var(--color-brand)' }}
+            >
+              {/* Dismiss — always top-right */}
+              <button
+                onClick={() => setLimitError(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-sm transition hover:opacity-60"
+                style={{ color: 'var(--color-text-body)' }}
+                aria-label="Dismiss"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/>
+                </svg>
+              </button>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pr-8 sm:pr-0">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold mb-0.5" style={{ color: 'var(--color-text-head)' }}>
+                    Monthly limit reached
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-body)' }}>
+                    {limitError}
+                  </p>
+                </div>
+                <a
+                  href="/billing"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-sm text-sm font-medium text-white transition hover:opacity-90 self-start sm:self-auto flex-shrink-0"
+                  style={{ backgroundColor: 'var(--color-brand)' }}
+                >
+                  Upgrade plan
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M2 7h10M8 3l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </a>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Outputs */}
         <AnimatePresence>
           {outputs.length > 0 && (
@@ -556,10 +638,14 @@ export default function DashboardPage() {
               </div>
 
               {outputs.map((output) => {
-                const displayContent = output.editedContent ?? output.content;
+                const activeVar = output.variations[output.activeVariation] ?? '';
+                const displayContent = output.isEditing
+                  ? (output.editedVariations[output.activeVariation] ?? activeVar)
+                  : (output.editedVariations[output.activeVariation] ?? (activeVar || output.content));
                 const charLimit = FORMAT_CHAR_LIMITS[output.format];
                 const chars = displayContent.length;
                 const words = displayContent.trim() ? displayContent.trim().split(/\s+/).length : 0;
+                const hasVariations = output.variations.length > 1;
 
                 return (
                   <motion.div
@@ -567,18 +653,21 @@ export default function DashboardPage() {
                     className="rounded-sm border overflow-hidden"
                     style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
                   >
-                    <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded-sm flex items-center justify-center text-white font-bold text-xs"
+                    {/* Card header */}
+                    <div className="px-4 sm:px-5 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                      {/* Row 1: format name + status */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-7 h-7 flex-shrink-0 rounded-sm flex items-center justify-center text-white font-bold text-xs"
                           style={{ backgroundColor: 'var(--color-brand)' }}>
                           {FORMAT_LABELS[output.format].charAt(0)}
                         </div>
-                        <h3 className="font-medium text-sm" style={{ color: 'var(--color-text-head)' }}>{FORMAT_LABELS[output.format]}</h3>
-                        {output.status === 'streaming' && <span className="text-xs animate-pulse" style={{ color: 'var(--color-brand)' }}>Generating...</span>}
-                        {output.status === 'pending' && <span className="text-xs" style={{ color: 'var(--color-text-body)' }}>Waiting...</span>}
+                        <h3 className="font-medium text-sm truncate" style={{ color: 'var(--color-text-head)' }}>{FORMAT_LABELS[output.format]}</h3>
+                        {output.status === 'streaming' && <span className="text-xs animate-pulse flex-shrink-0" style={{ color: 'var(--color-brand)' }}>Generating…</span>}
+                        {output.status === 'pending' && <span className="text-xs flex-shrink-0" style={{ color: 'var(--color-text-body)' }}>Waiting…</span>}
                       </div>
+                      {/* Row 2: actions (only when done) */}
                       {output.status === 'done' && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 mt-2 flex-wrap">
                           <button onClick={() => handleRate(output.format, 'up')} className="p-1.5 rounded-sm transition"
                             style={{ color: output.rating === 'up' ? '#16a34a' : 'var(--color-text-body)' }} title="Good">
                             <svg className="w-4 h-4" fill={output.rating === 'up' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" /><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" /></svg>
@@ -587,7 +676,7 @@ export default function DashboardPage() {
                             style={{ color: output.rating === 'down' ? 'var(--color-danger)' : 'var(--color-text-body)' }} title="Poor">
                             <svg className="w-4 h-4" fill={output.rating === 'down' ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M10 15v4a3 3 0 003 3l4-9V2H5.72a2 2 0 00-2 1.7l-1.38 9a2 2 0 002 2.3H10z" /><path d="M17 2h3a2 2 0 012 2v7a2 2 0 01-2 2h-3" /></svg>
                           </button>
-                          <div className="w-px h-4 mx-1" style={{ backgroundColor: 'var(--color-border)' }} />
+                          <div className="w-px h-4 mx-1 flex-shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
                           <button onClick={() => toggleEdit(output.format)} className="px-3 py-1.5 rounded-sm text-xs font-medium transition"
                             style={output.isEditing
                               ? { backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-brand)' }
@@ -598,7 +687,7 @@ export default function DashboardPage() {
                             style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-body)' }}>
                             Redo
                           </button>
-                          <button onClick={() => copyToClipboard(displayContent)} className="px-3 py-1.5 rounded-sm text-xs font-medium text-white transition hover:opacity-80"
+                          <button onClick={() => copyToClipboard(displayContent)} className="px-3 py-1.5 rounded-sm text-xs font-medium text-white transition hover:opacity-80 cursor-pointer"
                             style={{ backgroundColor: 'var(--color-brand)' }}>
                             Copy
                           </button>
@@ -606,12 +695,56 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    <div className="px-5 py-4">
+                    {/* Variation tabs */}
+                    {hasVariations && (
+                      <div className="flex items-center gap-1 px-4 sm:px-5 pt-3">
+                        {output.variations.map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveVariation(output.format, idx)}
+                            className="px-3 py-1 rounded-sm text-xs font-medium transition cursor-pointer"
+                            style={output.activeVariation === idx
+                              ? { backgroundColor: 'var(--color-brand)', color: '#fff' }
+                              : { backgroundColor: 'var(--color-bg)', color: 'var(--color-text-body)', border: '1px solid var(--color-border)' }
+                            }
+                          >
+                            {idx + 1}
+                          </button>
+                        ))}
+                        <span className="text-xs ml-1" style={{ color: 'var(--color-text-body)' }}>
+                          {output.editedVariations[output.activeVariation] ? '· edited' : ''}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="px-4 sm:px-5 py-4">
                       {output.status === 'error' ? (
-                        <p className="text-sm" style={{ color: 'var(--color-danger)' }}>{output.error}</p>
+                        <div className="flex flex-col items-start gap-3 py-2">
+                          <div className="flex items-start gap-2.5">
+                            <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="none">
+                              <circle cx="10" cy="10" r="9" stroke="var(--color-danger)" strokeWidth="1.5"/>
+                              <path d="M10 6v4M10 13.5v.5" stroke="var(--color-danger)" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                            <p className="text-sm leading-snug" style={{ color: 'var(--color-text-head)' }}>
+                              {output.error}
+                            </p>
+                          </div>
+                          {(output.error ?? '').toLowerCase().includes('limit') && (
+                            <a
+                              href="/billing"
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm text-xs font-medium text-white transition hover:opacity-90"
+                              style={{ backgroundColor: 'var(--color-brand)' }}
+                            >
+                              View plans
+                              <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <path d="M2 6h8M7 3l3 3-3 3" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </a>
+                          )}
+                        </div>
                       ) : output.isEditing ? (
                         <textarea
-                          value={output.editedContent ?? output.content}
+                          value={output.editedVariations[output.activeVariation] ?? activeVar}
                           onChange={(e) => updateEditContent(output.format, e.target.value)}
                           rows={12}
                           className="w-full px-3 py-2 rounded-sm border text-sm outline-none resize-y leading-relaxed"
@@ -621,7 +754,7 @@ export default function DashboardPage() {
                         />
                       ) : (
                         <div className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: 'var(--color-text-head)' }}>
-                          {output.content || (output.status === 'pending' && (
+                          {displayContent || (output.status === 'pending' && (
                             <div className="space-y-2">
                               {[0.75, 0.5, 0.65].map((w, i) => (
                                 <div key={i} className="h-3 rounded-full animate-pulse" style={{ width: `${w * 100}%`, backgroundColor: 'var(--color-bg-subtle)' }} />
@@ -633,7 +766,7 @@ export default function DashboardPage() {
                     </div>
 
                     {output.status === 'done' && (
-                      <div className="px-5 py-2 border-t flex items-center gap-4 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-body)' }}>
+                      <div className="px-4 sm:px-5 py-2 border-t flex items-center gap-4 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-body)' }}>
                         <span>{chars} chars</span>
                         <span>{words} words</span>
                         {charLimit && (

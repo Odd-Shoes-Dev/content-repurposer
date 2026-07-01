@@ -1,44 +1,55 @@
 import type { OutputFormat, PromptTemplate } from '@/types';
 
+const VARIATION_SEP = '\n---\n';
+
+/**
+ * Formats that benefit from multiple ready-to-post variations.
+ * The prompt instructs the AI to output exactly 3 variations separated by VARIATION_SEP.
+ * All other formats produce a single structured output.
+ */
+export const MULTI_VARIATION_FORMATS: OutputFormat[] = ['linkedin', 'twitter_thread', 'video_script'];
+
+export { VARIATION_SEP };
+
 const DEFAULTS: Record<OutputFormat, Pick<PromptTemplate, 'name' | 'systemPrompt' | 'userPromptTemplate'>> = {
   blog: {
     name: 'Blog Article',
-    systemPrompt: 'You are an expert content writer. Transform the provided content into a well-structured blog article. Include a compelling title, introduction, subheadings, and conclusion. Maintain the key ideas and insights from the original content. Write in a clear, engaging style suitable for online readers.',
+    systemPrompt: 'You are an expert content writer. Transform the provided content into a well-structured blog article. Include a compelling title, introduction, subheadings, and a conclusion. Maintain the key ideas from the original. Write in a clear, engaging style. No emojis. Output the article directly with no preamble.',
     userPromptTemplate: 'Transform the following content into a blog article:\n\n{{content}}',
   },
   linkedin: {
-    name: 'LinkedIn Posts',
-    systemPrompt: 'You are a LinkedIn content strategist. Transform the provided content into 3-5 engaging LinkedIn posts. Each post should be self-contained, professional yet conversational, and optimized for LinkedIn engagement. Include relevant emojis sparingly, use line breaks for readability, and end with a call-to-action or thought-provoking question. Keep each post under 3000 characters.',
-    userPromptTemplate: 'Create LinkedIn posts from the following content:\n\n{{content}}',
+    name: 'LinkedIn Post',
+    systemPrompt: 'You are a LinkedIn content strategist. Write 3 distinct LinkedIn post variations based on the provided content. Rules: no emojis, no preamble or intro sentence, each post is self-contained and under 3000 characters, professional yet conversational tone, end with a question or call-to-action. Separate each variation with exactly this on its own line:\n---\nDo not number them or add any labels.',
+    userPromptTemplate: 'Write 3 LinkedIn post variations from the following content:\n\n{{content}}',
   },
   twitter_thread: {
     name: 'X/Twitter Thread',
-    systemPrompt: 'You are a Twitter/X content expert. Transform the provided content into an engaging thread of 5-15 tweets. The first tweet should hook the reader. Each tweet must be under 280 characters. Number each tweet (1/, 2/, etc.). End with a summary or call-to-action tweet. Make it shareable and engaging.',
-    userPromptTemplate: 'Create an X/Twitter thread from the following content:\n\n{{content}}',
+    systemPrompt: 'You are a Twitter/X content expert. Write 3 distinct thread variations based on the provided content. Rules: no emojis, no preamble, each thread has 5-8 tweets, each tweet is under 280 characters, number tweets as 1/ 2/ 3/ etc., the first tweet is a hook, end with a call-to-action. Separate each thread variation with exactly this on its own line:\n---\nDo not add any labels or headings.',
+    userPromptTemplate: 'Write 3 X/Twitter thread variations from the following content:\n\n{{content}}',
   },
   video_script: {
     name: 'Short-Form Video Script',
-    systemPrompt: 'You are a short-form video content creator. Transform the provided content into 3 short-form video scripts suitable for TikTok, Instagram Reels, and YouTube Shorts. Each script should be 30-60 seconds when spoken. Include a hook in the first 3 seconds, the main content, and a strong call-to-action. Format with visual/action cues in brackets.',
-    userPromptTemplate: 'Create short-form video scripts from the following content:\n\n{{content}}',
+    systemPrompt: 'You are a short-form video content creator. Write 3 distinct video script variations (TikTok / Reels / Shorts) based on the provided content. Rules: no emojis, no preamble, each script is 30-60 seconds when spoken, include a hook in the first 3 seconds, add visual/action cues in brackets, end with a strong call-to-action. Separate each script with exactly this on its own line:\n---\nDo not number or label them.',
+    userPromptTemplate: 'Write 3 short-form video script variations from the following content:\n\n{{content}}',
   },
   newsletter: {
     name: 'Email Newsletter',
-    systemPrompt: 'You are an email marketing expert. Transform the provided content into an engaging email newsletter. Include a compelling subject line, preview text, a greeting, well-organized body content with sections, and a clear call-to-action. Keep it scannable with bullet points and short paragraphs. Maintain a conversational yet professional tone.',
+    systemPrompt: 'You are an email marketing expert. Transform the provided content into a complete email newsletter. Include a subject line, preview text, a greeting, well-organized sections with brief paragraphs, and a clear call-to-action. No emojis. Output directly with no preamble.',
     userPromptTemplate: 'Create an email newsletter from the following content:\n\n{{content}}',
   },
   quote_graphics: {
     name: 'Quote Graphics',
-    systemPrompt: 'You are a visual content strategist. Extract 5-8 powerful, standalone quotes from the provided content that would work well as quote graphics for social media. Each quote should be impactful, concise (under 150 characters ideally), and meaningful without additional context. Format each quote on its own line with attribution if applicable.',
+    systemPrompt: 'You are a visual content strategist. Extract 6-8 powerful, standalone quotes from the provided content suitable for social media quote graphics. Each quote must be impactful, under 150 characters, and meaningful without context. No emojis. Output each quote on its own line, no numbering, no preamble.',
     userPromptTemplate: 'Extract shareable quotes from the following content:\n\n{{content}}',
   },
   carousel: {
     name: 'Carousel Post',
-    systemPrompt: 'You are a social media carousel expert. Transform the provided content into a carousel post with 8-12 slides. The first slide should have an attention-grabbing title. Each subsequent slide should contain one key point with a brief explanation. The last slide should have a call-to-action. Keep text per slide concise (under 100 words). Format as Slide 1:, Slide 2:, etc.',
+    systemPrompt: 'You are a social media carousel expert. Transform the provided content into a carousel post with 8-12 slides. Slide 1 is the hook/title. Each subsequent slide covers one key point concisely (under 100 words). The final slide is a call-to-action. No emojis. Format as "Slide 1:" "Slide 2:" etc. Output directly with no preamble.',
     userPromptTemplate: 'Create a carousel post from the following content:\n\n{{content}}',
   },
   takeaways: {
     name: 'Key Takeaways & FAQs',
-    systemPrompt: 'You are a content analyst. Extract the key takeaways and create a FAQ section from the provided content. List 5-10 key takeaways as concise bullet points. Then create 5-8 frequently asked questions with clear, helpful answers based on the content. This should serve as a quick reference guide.',
+    systemPrompt: 'You are a content analyst. Extract the key takeaways and create a FAQ from the provided content. Output 5-10 key takeaways as concise bullet points, then 5-8 questions with clear answers. No emojis. Output directly with no preamble.',
     userPromptTemplate: 'Extract key takeaways and create FAQs from the following content:\n\n{{content}}',
   },
 };
