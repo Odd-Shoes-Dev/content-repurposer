@@ -49,18 +49,8 @@ export default function SignInPage() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
-    try {
-      const result = await signIn('google', { redirect: false });
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        router.push('/dashboard');
-      }
-    } catch {
-      setError('Google sign-in failed. Please try again.');
-    } finally {
-      setGoogleLoading(false);
-    }
+    await signIn('google', { callbackUrl: '/dashboard' });
+    // OAuth redirects the full page — no need to handle result here
   }
 
   async function handleReactivate() {

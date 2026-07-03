@@ -81,27 +81,31 @@ export const authOptions: NextAuthOptions = {
       // Handle OAuth providers (Google)
       if (account?.provider === 'google' && user.email) {
         const db = getDBProvider();
-        const existingUser = await db.getUserByEmail(user.email);
-
-        if (existingUser) {
-          const row = existingUser as unknown as { deleted_at?: string; scheduled_deletion_at?: string };
-          if (row.deleted_at) {
-            const scheduledDeletion = row.scheduled_deletion_at ? new Date(row.scheduled_deletion_at) : null;
-            if (scheduledDeletion && scheduledDeletion > new Date()) {
-              throw new Error(`ACCOUNT_PENDING_DELETION:${scheduledDeletion.toISOString()}`);
-            }
-            return false;
-          }
-          return true;
-        }
-
-        // Create new user from Google OAuth
         try {
-          await db.createUser({
+          const existingUser = await db.getUserByEmail(user.email);
+
+          if (existingUser) {
+            const row = existingUser as unknown as { deleted_at?: string; scheduled_deletion_at?: string };
+            if (row.deleted_at) {
+              const scheduledDeletion = row.scheduled_deletion_at ? new Date(row.scheduled_deletion_at) : null;
+              if (scheduledDeletion && scheduledDeletion > new Date()) {
+                return `/auth/signin?error=ACCOUNT_PENDING_DELETION:${scheduledDeletion.toISOString()}`;
+              }
+              return false;
+            }
+            // Replace Google's subject ID with the DB user ID so jwt callback gets the right ID
+            user.id = existingUser.id;
+            return true;
+          }
+
+          // Create new user from Google OAuth
+          const newUser = await db.createUser({
             email: user.email,
             name: user.name || user.email.split('@')[0],
-            passwordHash: '', // OAuth users don't have password hashes
+            passwordHash: '',
           });
+          // Attach DB id so jwt callback stores the correct ID in the token
+          user.id = newUser.id;
           return true;
         } catch {
           return false;
