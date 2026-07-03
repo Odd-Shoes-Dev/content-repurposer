@@ -34,7 +34,8 @@ function StatusMsg({ msg, type }: { msg: string; type: 'success' | 'error' }) {
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession();
-  const user = session?.user as { id?: string; name?: string; email?: string } | undefined;
+  const user = session?.user as { id?: string; name?: string; email?: string; provider?: string } | undefined;
+  const isGoogleUser = user?.provider === 'google';
 
   // Name
   const [name, setName] = useState(user?.name ?? '');
@@ -60,6 +61,7 @@ export default function SettingsPage() {
   // Delete
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePw, setDeletePw] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteStatus, setDeleteStatus] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -139,14 +141,18 @@ export default function SettingsPage() {
   }
 
   async function deleteAccount() {
-    if (!deletePw) { setDeleteStatus({ msg: 'Password required', type: 'error' }); return; }
+    if (isGoogleUser) {
+      if (deleteConfirm !== 'delete') { setDeleteStatus({ msg: 'Please type "delete" to confirm', type: 'error' }); return; }
+    } else {
+      if (!deletePw) { setDeleteStatus({ msg: 'Password required', type: 'error' }); return; }
+    }
     setDeleting(true);
     setDeleteStatus(null);
     try {
       const res = await fetch('/api/user/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: deletePw }),
+        body: JSON.stringify(isGoogleUser ? { confirm: deleteConfirm } : { password: deletePw }),
       });
       const data = await res.json() as { error?: string };
       if (!res.ok) { setDeleteStatus({ msg: data.error ?? 'Failed', type: 'error' }); return; }
@@ -195,35 +201,47 @@ export default function SettingsPage() {
             </FieldRow>
 
             {/* Email */}
-            <FieldRow label="Email address" hint="Requires current password to change">
-              <div className="space-y-2">
-                <input className={inputClass} style={inputStyle} type="email" value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
-                  placeholder="New email"
-                />
-                <div className="flex gap-2">
-                  <input className={inputClass} style={inputStyle} type="password" value={emailPassword}
-                    onChange={(e) => setEmailPassword(e.target.value)}
+            {isGoogleUser ? (
+              <FieldRow label="Email address" hint="Managed by Google — change it in your Google account">
+                <input className={inputClass} style={{ ...inputStyle, opacity: 0.6 }} type="email" value={email} disabled />
+                <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: 'var(--color-text-body)' }}>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                  </svg>
+                  You signed in with Google. Email changes are managed through your Google account.
+                </p>
+              </FieldRow>
+            ) : (
+              <FieldRow label="Email address" hint="Requires current password to change">
+                <div className="space-y-2">
+                  <input className={inputClass} style={inputStyle} type="email" value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
                     onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
-                    placeholder="Current password"
+                    placeholder="New email"
                   />
-                  <button onClick={saveEmail} disabled={savingEmail}
-                    className="px-4 py-2.5 rounded-sm text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
-                    style={{ backgroundColor: 'var(--color-brand)' }}>
-                    {savingEmail ? '...' : 'Save'}
-                  </button>
+                  <div className="flex gap-2">
+                    <input className={inputClass} style={inputStyle} type="password" value={emailPassword}
+                      onChange={(e) => setEmailPassword(e.target.value)}
+                      onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
+                      onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
+                      placeholder="Current password"
+                    />
+                    <button onClick={saveEmail} disabled={savingEmail}
+                      className="px-4 py-2.5 rounded-sm text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                      style={{ backgroundColor: 'var(--color-brand)' }}>
+                      {savingEmail ? '...' : 'Save'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {emailStatus && <StatusMsg msg={emailStatus.msg} type={emailStatus.type} />}
-            </FieldRow>
+                {emailStatus && <StatusMsg msg={emailStatus.msg} type={emailStatus.type} />}
+              </FieldRow>
+            )}
           </div>
         </motion.div>
 
-        {/* Password section */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+        {/* Password section — hidden for Google users */}
+        {!isGoogleUser && <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
           className="rounded-sm border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
           <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
             <h2 className="text-sm font-semibold" style={{ color: 'var(--color-text-head)' }}>Password</h2>
@@ -250,7 +268,7 @@ export default function SettingsPage() {
               {savingPw ? 'Saving...' : 'Update password'}
             </button>
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* Preferences section */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.14 }}
@@ -301,7 +319,7 @@ export default function SettingsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 bg-black/50"
-              onClick={() => { setShowDeleteModal(false); setDeletePw(''); setDeleteStatus(null); }}
+              onClick={() => { setShowDeleteModal(false); setDeletePw(''); setDeleteConfirm(''); setDeleteStatus(null); }}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -323,17 +341,34 @@ export default function SettingsPage() {
                 <p className="text-sm text-center mb-6" style={{ color: 'var(--color-text-body)' }}>
                   Your account will be queued for deletion in 30 days. You can reactivate it by signing in during that period.
                 </p>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-body)' }}>Enter your password to confirm</label>
-                <input type="password" value={deletePw} onChange={(e) => setDeletePw(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-sm border text-sm outline-none transition mb-3"
-                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-head)' }}
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
-                  placeholder="Your password"
-                />
+                {isGoogleUser ? (
+                  <>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-body)' }}>
+                      Type <span className="font-bold" style={{ color: 'var(--color-danger)' }}>delete</span> to confirm
+                    </label>
+                    <input type="text" value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-sm border text-sm outline-none transition mb-3"
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-head)' }}
+                      onFocus={(e) => (e.target.style.borderColor = 'var(--color-danger)')}
+                      onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
+                      placeholder="delete"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-body)' }}>Enter your password to confirm</label>
+                    <input type="password" value={deletePw} onChange={(e) => setDeletePw(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-sm border text-sm outline-none transition mb-3"
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg)', color: 'var(--color-text-head)' }}
+                      onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
+                      onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
+                      placeholder="Your password"
+                    />
+                  </>
+                )}
                 {deleteStatus && <StatusMsg msg={deleteStatus.msg} type={deleteStatus.type} />}
                 <div className="flex gap-3 mt-4">
-                  <button onClick={() => { setShowDeleteModal(false); setDeletePw(''); setDeleteStatus(null); }}
+                  <button onClick={() => { setShowDeleteModal(false); setDeletePw(''); setDeleteConfirm(''); setDeleteStatus(null); }}
                     className="flex-1 py-2.5 rounded-sm text-sm font-medium border transition hover:opacity-80"
                     style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-body)', backgroundColor: 'transparent' }}>
                     Cancel

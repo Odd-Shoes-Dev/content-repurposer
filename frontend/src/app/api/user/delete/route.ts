@@ -9,20 +9,28 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 
-  const userId = (session.user as { id: string }).id;
-  const { password } = await request.json() as { password: string };
+  const sessionUser = session.user as { id: string; provider?: string };
+  const userId = sessionUser.id;
+  const isGoogleUser = sessionUser.provider === 'google';
 
-  if (!password) {
-    return new Response(JSON.stringify({ error: 'Password is required' }), { status: 400 });
-  }
-
+  const body = await request.json() as { password?: string; confirm?: string };
   const db = getDBProvider();
   const user = await db.getUserById(userId);
   if (!user) return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
 
-  const hash = await db.getPasswordHash(user.email);
-  if (!hash || !(await bcrypt.compare(password, hash))) {
-    return new Response(JSON.stringify({ error: 'Incorrect password' }), { status: 403 });
+  if (isGoogleUser) {
+    // Google users confirm with typed text instead of password
+    if (body.confirm !== 'delete') {
+      return new Response(JSON.stringify({ error: 'Please type "delete" to confirm' }), { status: 400 });
+    }
+  } else {
+    if (!body.password) {
+      return new Response(JSON.stringify({ error: 'Password is required' }), { status: 400 });
+    }
+    const hash = await db.getPasswordHash(user.email);
+    if (!hash || !(await bcrypt.compare(body.password, hash))) {
+      return new Response(JSON.stringify({ error: 'Incorrect password' }), { status: 403 });
+    }
   }
 
   await db.softDeleteUser(userId);
