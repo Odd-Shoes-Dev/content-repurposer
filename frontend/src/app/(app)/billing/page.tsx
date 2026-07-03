@@ -167,7 +167,11 @@ export default function BillingPage() {
 
         {/* Footer note */}
         <p className="text-xs text-center pb-4" style={{ color: 'var(--color-text-body)' }}>
-          Payments are processed securely by Whop. Cancel anytime from your Whop dashboard.
+          Payments are processed securely by Whop. Cancel anytime from your Whop dashboard.{' '}
+          Payment issues?{' '}
+          <a href="mailto:daniel@oddshoes.dev" className="underline hover:opacity-80 transition-opacity" style={{ color: 'var(--color-brand)' }}>
+            daniel@oddshoes.dev
+          </a>
         </p>
 
       </div>
