@@ -1,6 +1,6 @@
 # Content Repurposer - Architecture & Implementation Plan
  
-## Context 
+## Context  
 
 A web app that takes text content (podcast transcripts, articles, blog posts, etc.) and uses AI to repurpose it into multiple social media formats: blog articles, LinkedIn posts, X threads, video scripts, newsletters, quote graphics, carousels, and FAQs. Text-only for now. The architecture uses abstraction layers for all third-party services so providers can be swapped easily.
 
