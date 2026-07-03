@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -28,6 +28,8 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedOutputs, setExpandedOutputs] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState('');
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -41,6 +43,12 @@ export default function HistoryPage() {
 
   useEffect(() => { if (session) fetchHistory(); }, [session, fetchHistory]);
 
+  const filteredSources = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return sources;
+    return sources.filter((s) => s.title.toLowerCase().includes(q));
+  }, [sources, search]);
+
   async function handleDelete(sourceId: string) {
     const res = await fetch(`/api/sources?id=${sourceId}`, { method: 'DELETE' });
     if (res.ok) setSources((prev) => prev.filter((s) => s.id !== sourceId));
@@ -50,6 +58,14 @@ export default function HistoryPage() {
     await navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  function toggleOutputExpand(outputId: string) {
+    setExpandedOutputs((prev) => {
+      const next = new Set(prev);
+      next.has(outputId) ? next.delete(outputId) : next.add(outputId);
+      return next;
+    });
   }
 
   if (loading) {
@@ -62,7 +78,7 @@ export default function HistoryPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)', color: 'var(--color-text-head)' }}>
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-7">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-7">
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="font-[family-name:var(--font-playfair)] text-2xl sm:text-3xl font-bold tracking-tight mb-1" style={{ color: 'var(--color-text-head)' }}>
@@ -102,7 +118,52 @@ export default function HistoryPage() {
           </motion.div>
         )}
 
-        {/* Sources List */}
+        {/* Search */}
+        {sources.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}>
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                style={{ color: 'var(--color-text-body)' }}
+              >
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by title…"
+                className="w-full pl-9 pr-4 py-2.5 rounded-sm border text-sm outline-none transition"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-surface)',
+                  color: 'var(--color-text-head)',
+                }}
+                onFocus={(e) => (e.target.style.borderColor = 'var(--color-brand)')}
+                onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs hover:opacity-70 transition-opacity"
+                  style={{ color: 'var(--color-text-body)' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {search && (
+              <p className="text-xs mt-2" style={{ color: 'var(--color-text-body)' }}>
+                {filteredSources.length === 0
+                  ? 'No results found'
+                  : `${filteredSources.length} result${filteredSources.length === 1 ? '' : 's'}`}
+              </p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Sources list */}
         {sources.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
             <p className="text-base mb-3" style={{ color: 'var(--color-text-body)' }}>No history yet</p>
@@ -110,9 +171,16 @@ export default function HistoryPage() {
               Go repurpose some content →
             </Link>
           </motion.div>
+        ) : filteredSources.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-16">
+            <p className="text-sm" style={{ color: 'var(--color-text-body)' }}>No sessions match &ldquo;{search}&rdquo;</p>
+            <button onClick={() => setSearch('')} className="text-sm mt-2 hover:opacity-70 transition-opacity" style={{ color: 'var(--color-brand)' }}>
+              Clear search
+            </button>
+          </motion.div>
         ) : (
           <div className="space-y-3">
-            {sources.map((source, i) => (
+            {filteredSources.map((source, i) => (
               <motion.div
                 key={source.id}
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -121,17 +189,32 @@ export default function HistoryPage() {
                 className="rounded-sm border overflow-hidden"
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
               >
+                {/* Collapsed row */}
                 <div
                   onClick={() => setExpandedId(expandedId === source.id ? null : source.id)}
-                  className="w-full px-5 py-4 flex items-center justify-between cursor-pointer transition-opacity hover:opacity-80"
+                  className="w-full px-4 sm:px-5 py-4 flex items-start justify-between cursor-pointer transition-opacity hover:opacity-80 gap-3"
                 >
-                  <div>
-                    <h3 className="font-medium text-sm" style={{ color: 'var(--color-text-head)' }}>{source.title}</h3>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-body)' }}>
-                      {source.wordCount} words · {new Date(source.createdAt).toLocaleDateString()} · {source.outputs.length} outputs
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-sm truncate" style={{ color: 'var(--color-text-head)' }}>{source.title}</h3>
+                    <p className="text-xs mt-0.5 mb-2" style={{ color: 'var(--color-text-body)' }}>
+                      {source.wordCount} words · {new Date(source.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })} · {source.outputs.length} output{source.outputs.length !== 1 ? 's' : ''}
                     </p>
+                    {/* Format pills */}
+                    {source.outputs.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {source.outputs.map((o) => (
+                          <span
+                            key={o.id}
+                            className="px-2 py-0.5 rounded-sm text-xs"
+                            style={{ backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-brand)' }}
+                          >
+                            {FORMAT_LABELS[o.format]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-shrink-0 mt-0.5">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(source.id); }}
                       className="text-xs px-3 py-1.5 rounded-sm transition hover:opacity-70"
@@ -139,47 +222,77 @@ export default function HistoryPage() {
                     >
                       Delete
                     </button>
-                    <span className="text-xs" style={{ color: 'var(--color-text-body)' }}>
-                      {expandedId === source.id ? '▲' : '▼'}
-                    </span>
+                    <svg
+                      className="w-4 h-4 transition-transform duration-200"
+                      style={{
+                        color: 'var(--color-text-body)',
+                        transform: expandedId === source.id ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }}
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
                   </div>
                 </div>
 
+                {/* Expanded outputs */}
                 <AnimatePresence>
                   {expandedId === source.id && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }}
+                      exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
                       className="overflow-hidden border-t"
                       style={{ borderColor: 'var(--color-border)' }}
                     >
-                      {source.outputs.map((output, j) => (
-                        <motion.div
-                          key={output.id}
-                          initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: j * 0.05 }}
-                          className="px-5 py-4 border-b last:border-0"
-                          style={{ borderColor: 'var(--color-border)' }}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium" style={{ color: 'var(--color-brand)' }}>
-                              {FORMAT_LABELS[output.format]}
-                            </span>
-                            <button
-                              onClick={() => copyToClipboard(output.content, output.id)}
-                              className="px-3 py-1.5 rounded-sm text-xs font-medium transition"
-                              style={copiedId === output.id
-                                ? { backgroundColor: 'rgba(22,163,74,0.1)', color: '#16a34a' }
-                                : { backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-brand)' }}
+                      {source.outputs.map((output, j) => {
+                        const isExpanded = expandedOutputs.has(output.id);
+                        const isLong = output.content.length > 400;
+                        return (
+                          <motion.div
+                            key={output.id}
+                            initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: j * 0.05 }}
+                            className="px-4 sm:px-5 py-4 border-b last:border-0"
+                            style={{ borderColor: 'var(--color-border)' }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-semibold" style={{ color: 'var(--color-brand)' }}>
+                                {FORMAT_LABELS[output.format]}
+                              </span>
+                              <button
+                                onClick={() => copyToClipboard(output.content, output.id)}
+                                className="px-3 py-1.5 rounded-sm text-xs font-medium transition cursor-pointer"
+                                style={copiedId === output.id
+                                  ? { backgroundColor: 'rgba(22,163,74,0.1)', color: '#16a34a' }
+                                  : { backgroundColor: 'var(--color-bg-subtle)', color: 'var(--color-brand)' }}
+                              >
+                                {copiedId === output.id ? 'Copied!' : 'Copy'}
+                              </button>
+                            </div>
+                            <p
+                              className="text-sm leading-relaxed whitespace-pre-wrap"
+                              style={{
+                                color: 'var(--color-text-body)',
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                WebkitLineClamp: isExpanded ? 'unset' : 4,
+                                overflow: isExpanded ? 'visible' : 'hidden',
+                              } as React.CSSProperties}
                             >
-                              {copiedId === output.id ? 'Copied!' : 'Copy'}
-                            </button>
-                          </div>
-                          <p className="text-sm leading-relaxed line-clamp-4" style={{ color: 'var(--color-text-body)' }}>
-                            {output.content}
-                          </p>
-                        </motion.div>
-                      ))}
+                              {output.content}
+                            </p>
+                            {isLong && (
+                              <button
+                                onClick={() => toggleOutputExpand(output.id)}
+                                className="text-xs mt-2 hover:opacity-70 transition-opacity"
+                                style={{ color: 'var(--color-brand)' }}
+                              >
+                                {isExpanded ? 'Show less ↑' : 'Show more ↓'}
+                              </button>
+                            )}
+                          </motion.div>
+                        );
+                      })}
                     </motion.div>
                   )}
                 </AnimatePresence>
