@@ -1,11 +1,16 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { getDBProvider } from './db';
 import { config } from './config';
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -72,6 +77,39 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
+    async signIn({ user, account }) {
+      // Handle OAuth providers (Google)
+      if (account?.provider === 'google' && user.email) {
+        const db = getDBProvider();
+        const existingUser = await db.getUserByEmail(user.email);
+
+        if (existingUser) {
+          const row = existingUser as unknown as { deleted_at?: string; scheduled_deletion_at?: string };
+          if (row.deleted_at) {
+            const scheduledDeletion = row.scheduled_deletion_at ? new Date(row.scheduled_deletion_at) : null;
+            if (scheduledDeletion && scheduledDeletion > new Date()) {
+              throw new Error(`ACCOUNT_PENDING_DELETION:${scheduledDeletion.toISOString()}`);
+            }
+            return false;
+          }
+          return true;
+        }
+
+        // Create new user from Google OAuth
+        try {
+          await db.createUser({
+            email: user.email,
+            name: user.name || user.email.split('@')[0],
+            passwordHash: '', // OAuth users don't have password hashes
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
