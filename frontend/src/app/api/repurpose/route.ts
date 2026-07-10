@@ -53,16 +53,18 @@ export async function POST(request: Request) {
   const planKey = (rawPlan in config.plans ? rawPlan : 'free') as keyof typeof config.plans;
   const planCfg = config.plans[planKey];
 
-  // Enforce monthly repurpose limit
-  if (user.monthlyRequestsUsed >= planCfg.monthlyRequests) {
+  const isDev = process.env.NODE_ENV === 'development';
+
+  // Enforce monthly repurpose limit (skipped in local dev)
+  if (!isDev && user.monthlyRequestsUsed >= planCfg.monthlyRequests) {
     return new Response(
       JSON.stringify({ error: `Monthly limit reached for the ${planCfg.label} plan. Upgrade to continue.` }),
       { status: 429 }
     );
   }
 
-  // Enforce formats-per-run limit
-  if (formats.length > planCfg.maxFormatsPerRun) {
+  // Enforce formats-per-run limit (skipped in local dev)
+  if (!isDev && formats.length > planCfg.maxFormatsPerRun) {
     return new Response(
       JSON.stringify({ error: `Your ${planCfg.label} plan allows up to ${planCfg.maxFormatsPerRun} formats per run. Upgrade to select more.` }),
       { status: 403 }
@@ -87,10 +89,7 @@ export async function POST(request: Request) {
         if (i > 0) {
           await new Promise((r) => setTimeout(r, 2000));
         }
-        let template = await db.getTemplate(format);
-        if (!template) {
-          template = getDefaultTemplate(format);
-        }
+        const template = getDefaultTemplate(format);
 
         const { systemPrompt, userPrompt } = buildPrompt(template, content, tone, customInstructions);
 
