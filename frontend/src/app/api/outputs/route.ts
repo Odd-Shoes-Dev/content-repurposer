@@ -55,10 +55,7 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ error: 'Source not found' }), { status: 404 });
   }
 
-  let template = await db.getTemplate(format);
-  if (!template) {
-    template = getDefaultTemplate(format);
-  }
+  const template = getDefaultTemplate(format);
 
   const { systemPrompt, userPrompt } = buildPrompt(template, source.content, tone, customInstructions);
 
