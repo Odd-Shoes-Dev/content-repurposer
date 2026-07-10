@@ -81,7 +81,7 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string } | null>(null);
+  const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string; monthlyRequestsUsed: number } | null>(null);
   const [planKey, setPlanKey] = useState<keyof typeof config.plans>('free');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [nudgeVisible, setNudgeVisible] = useState(false);
@@ -103,11 +103,12 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/stats')
       .then(r => r.json())
-      .then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string }) => {
+      .then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string; monthlyRequestsUsed?: number }) => {
         setStats({
           wordCount: data.wordCount ?? 0,
           totalOutputs: data.totalOutputs ?? 0,
           topPlatform: data.topPlatform ?? '—',
+          monthlyRequestsUsed: data.monthlyRequestsUsed ?? 0,
         });
       }).catch(() => {});
 
@@ -635,6 +636,31 @@ export default function DashboardPage() {
           )}
           <span className="text-xs" style={{ color: 'var(--color-text-body)' }}>Ctrl+Enter</span>
         </div>
+
+        {/* Remaining repurposes */}
+        {stats && (() => {
+          const limit = config.plans[planKey].monthlyRequests;
+          const used = stats.monthlyRequestsUsed;
+          const remaining = Math.max(0, limit - used);
+          const isLow = remaining <= 2;
+          const isUnlimited = limit >= 99999;
+          if (isUnlimited) return null;
+          return (
+            <div className="flex items-center justify-center gap-2 text-xs" style={{ color: isLow ? '#d97706' : 'var(--color-text-body)' }}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>
+                <strong>{remaining}</strong> of {limit} repurposes remaining this month
+              </span>
+              {isLow && (
+                <a href="/billing" className="underline font-medium" style={{ color: '#d97706' }}>
+                  Upgrade
+                </a>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Limit banner */}
         <AnimatePresence>
