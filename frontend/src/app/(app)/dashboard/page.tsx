@@ -15,6 +15,10 @@ const MAX_CONTENT = 50000;
 const MAX_TITLE = 120;
 const MAX_INSTRUCTIONS = 300;
 
+const EXAMPLE_CONTENT = `Last week I gave a 45-minute talk on how AI is changing the way small businesses hire. The audience had questions for 30 minutes after. I covered three main points: why traditional job descriptions fail to attract the right talent, how AI can screen for culture fit before the first interview, and what the future of onboarding looks like when AI handles the first 90 days. The biggest takeaway: companies that integrate AI into their hiring process save an average of 40 hours per hire and reduce mis-hires by over 60%.`;
+
+const EXAMPLE_TITLE = 'AI is changing how businesses hire';
+
 const TONES: { value: Tone; label: string; desc: string }[] = [
   { value: 'professional', label: 'Professional', desc: 'Polished & formal' },
   { value: 'casual', label: 'Casual', desc: 'Relaxed & friendly' },
@@ -77,8 +81,10 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string } | null>(null);
+  const [stats, setStats] = useState<{ wordCount: number; totalOutputs: number; topPlatform: string; monthlyRequestsUsed: number } | null>(null);
   const [planKey, setPlanKey] = useState<keyof typeof config.plans>('free');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [nudgeVisible, setNudgeVisible] = useState(false);
 
   const maxFormats = config.plans[planKey].maxFormatsPerRun;
 
@@ -97,11 +103,12 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/stats')
       .then(r => r.json())
-      .then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string }) => {
+      .then((data: { wordCount?: number; totalOutputs?: number; topPlatform?: string; monthlyRequestsUsed?: number }) => {
         setStats({
           wordCount: data.wordCount ?? 0,
           totalOutputs: data.totalOutputs ?? 0,
           topPlatform: data.topPlatform ?? '—',
+          monthlyRequestsUsed: data.monthlyRequestsUsed ?? 0,
         });
       }).catch(() => {});
 
@@ -113,10 +120,24 @@ export default function DashboardPage() {
       }).catch(() => {});
   }, []);
 
+  // Onboarding: pre-fill example on first visit
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const visited = localStorage.getItem('cr_visited');
+    if (!visited) {
+      setContent(EXAMPLE_CONTENT);
+      setTitle(EXAMPLE_TITLE);
+      setSelectedFormats(['linkedin']);
+      setShowOnboarding(true);
+      localStorage.setItem('cr_visited', '1');
+    }
+  }, []);
+
   // Ctrl+Enter to generate
   const copyToClipboard = useCallback(async (text: string) => {
     await navigator.clipboard.writeText(text);
     toast('Copied!', 'success');
+    setNudgeVisible(true);
   }, [toast]);
 
   useEffect(() => {
@@ -359,7 +380,7 @@ export default function DashboardPage() {
             What would you like to repurpose today?
           </p>
           {stats && (
-            <div className="grid grid-cols-3 xs:grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               <StatsCard
                 label="Words generated"
                 value={stats.wordCount.toLocaleString()}
@@ -375,9 +396,46 @@ export default function DashboardPage() {
                 value={stats.totalOutputs}
                 icon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>}
               />
+              <StatsCard
+                label="Hours saved"
+                value={`~${Math.max(1, Math.round(stats.totalOutputs * 0.5))}h`}
+                icon={<svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>}
+              />
             </div>
           )}
         </motion.div>
+
+        {/* Onboarding banner */}
+        <AnimatePresence>
+          {showOnboarding && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="rounded-sm border px-4 py-3 flex items-start gap-3 relative"
+              style={{ backgroundColor: 'var(--color-bg-subtle)', borderColor: 'var(--color-brand)', borderLeftWidth: '3px' }}
+            >
+              <svg className="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="var(--color-brand)" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8"/>
+                <path d="M10 9v5M10 6.5v.5" strokeLinecap="round"/>
+              </svg>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text-head)' }}>Welcome! We&apos;ve pre-loaded an example</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-body)' }}>
+                  Hit <strong>Repurpose Content</strong> to see how it works, then paste your own content.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowOnboarding(false)}
+                className="p-1 rounded-sm transition hover:opacity-60 flex-shrink-0"
+                style={{ color: 'var(--color-text-body)' }}
+                aria-label="Dismiss"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 2l10 10M12 2L2 12" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content input */}
         <motion.section
@@ -553,7 +611,7 @@ export default function DashboardPage() {
           <motion.button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="w-full sm:w-auto px-10 py-4 rounded-sm text-base font-medium text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-10 py-4 rounded-sm text-base font-medium text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             style={{
               backgroundColor: 'var(--color-brand)',
               boxShadow: canGenerate ? '0 8px 30px rgba(124,106,239,0.3)' : 'none',
@@ -578,6 +636,32 @@ export default function DashboardPage() {
           )}
           <span className="text-xs" style={{ color: 'var(--color-text-body)' }}>Ctrl+Enter</span>
         </div>
+
+        {/* Remaining repurposes */}
+        {stats && process.env.NODE_ENV !== 'development' && (() => {
+          const limit = config.plans[planKey].monthlyRequests;
+          const used = stats.monthlyRequestsUsed ?? 0;
+          const remaining = Number.isFinite(limit) && Number.isFinite(used) ? Math.max(0, limit - used) : null;
+          if (remaining === null) return null;
+          const isLow = remaining <= 2;
+          const isUnlimited = limit >= 99999;
+          if (isUnlimited) return null;
+          return (
+            <div className="flex items-center justify-center gap-2 text-xs" style={{ color: isLow ? '#d97706' : 'var(--color-text-body)' }}>
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span>
+                <strong>{remaining}</strong> of {limit} repurposes remaining this month
+              </span>
+              {isLow && (
+                <a href="/billing" className="underline font-medium" style={{ color: '#d97706' }}>
+                  Upgrade
+                </a>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Limit banner */}
         <AnimatePresence>
@@ -782,6 +866,48 @@ export default function DashboardPage() {
                 );
               })}
             </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Post-copy nudge */}
+        <AnimatePresence>
+          {nudgeVisible && doneCount > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="rounded-sm border px-5 py-4 flex items-center gap-4 justify-between"
+              style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+            >
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text-head)' }}>Content copied — nice work!</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-body)' }}>Ready to repurpose something else?</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    setNudgeVisible(false);
+                    setContent('');
+                    setTitle('');
+                    setSelectedFormats([]);
+                    setOutputs([]);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 rounded-sm text-sm font-medium text-white transition hover:opacity-90"
+                  style={{ backgroundColor: 'var(--color-brand)' }}
+                >
+                  New content
+                </button>
+                <button
+                  onClick={() => setNudgeVisible(false)}
+                  className="p-1.5 rounded-sm transition hover:opacity-60"
+                  style={{ color: 'var(--color-text-body)' }}
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3 3l10 10M13 3L3 13" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

@@ -327,6 +327,112 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
+      {/* ── Before / After Demo ── */}
+      <section className="py-24 md:py-32 relative overflow-hidden">
+        <HexagonSVG className="absolute bottom-8 right-[4%] w-28 opacity-40" style={{ color: '#E8C4A0' }} />
+        <div className="max-w-6xl mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-14"
+          >
+            <motion.h2
+              variants={fadeInUp}
+              className="font-[family-name:var(--font-playfair)] text-3xl md:text-4xl font-bold tracking-tight mb-4"
+              style={{ color: '#2D2A3E' }}
+            >
+              See it in action
+            </motion.h2>
+            <motion.p variants={fadeInUp} className="text-base max-w-md mx-auto" style={{ color: '#6B6580' }}>
+              Paste a raw transcript. Get a polished LinkedIn post ready to publish.
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            className="grid md:grid-cols-2 gap-6 items-start"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+          >
+            {/* Input side */}
+            <motion.div variants={fadeInUp}>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: '#6B6580' }}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="1" y="1" width="12" height="12" rx="2"/>
+                  <line x1="4" y1="4.5" x2="10" y2="4.5" strokeLinecap="round"/>
+                  <line x1="4" y1="7" x2="10" y2="7" strokeLinecap="round"/>
+                  <line x1="4" y1="9.5" x2="7" y2="9.5" strokeLinecap="round"/>
+                </svg>
+                Your raw content
+              </div>
+              <div className="rounded-xl border p-5 text-sm leading-relaxed" style={{ backgroundColor: '#F8F6F3', borderColor: 'rgba(124,106,239,0.15)', color: '#6B6580' }}>
+                <p className="font-medium mb-2 text-xs" style={{ color: '#2D2A3E' }}>📄 AI &amp; Hiring — Talk Transcript</p>
+                <p>Last week I gave a 45-minute talk on how AI is changing the way small businesses hire. I covered three main points: why traditional job descriptions fail to attract the right talent, how AI can screen for culture fit before the first interview, and what onboarding looks like when AI handles the first 90 days.</p>
+                <p className="mt-3">The biggest takeaway: companies that integrate AI into their hiring process save an average of 40 hours per hire and reduce mis-hires by over 60%.</p>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ backgroundColor: '#F0EDFA', color: '#7C6AEF' }}>LinkedIn</span>
+                  <span className="text-xs" style={{ color: '#6B6580' }}>· Professional tone</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Output side */}
+            <motion.div variants={fadeInUp}>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: '#7C6AEF' }}>
+                <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 7h10M8 3l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Ready to publish
+              </div>
+              <motion.div
+                className="rounded-xl border p-5 relative"
+                style={{ backgroundColor: 'white', borderColor: 'rgba(124,106,239,0.2)', boxShadow: '0 4px 24px rgba(124,106,239,0.08)' }}
+              >
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: '#7C6AEF' }}>L</div>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: '#2D2A3E' }}>LinkedIn Post</p>
+                    <p className="text-[10px]" style={{ color: '#6B6580' }}>Ready to copy</p>
+                  </div>
+                  <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#F0EDFA', color: '#7C6AEF' }}>✓ Done</span>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: '#2D2A3E' }}>
+                  I gave a talk last week that changed how I think about hiring.
+                </p>
+                <p className="text-sm leading-relaxed mt-2" style={{ color: '#2D2A3E' }}>
+                  Most companies are still writing job descriptions the same way they did 20 years ago — and wondering why they can&apos;t find the right people.
+                </p>
+                <p className="text-sm leading-relaxed mt-2" style={{ color: '#2D2A3E' }}>
+                  Here&apos;s what AI-powered hiring actually looks like:
+                </p>
+                <p className="text-sm leading-relaxed mt-2" style={{ color: '#2D2A3E' }}>
+                  → Screen for culture fit before the first interview<br/>
+                  → Automate the first 90 days of onboarding<br/>
+                  → Save 40 hours per hire on average<br/>
+                  → Reduce mis-hires by 60%
+                </p>
+                <p className="text-sm leading-relaxed mt-2" style={{ color: '#2D2A3E' }}>
+                  The companies that figure this out now will have an unfair advantage in 3 years.
+                </p>
+                <p className="text-sm mt-2" style={{ color: '#7C6AEF' }}>
+                  Are you already using AI in your hiring process?
+                </p>
+                <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: 'rgba(124,106,239,0.1)' }}>
+                  <span className="text-[10px]" style={{ color: '#6B6580' }}>487 chars · 5 secs to generate</span>
+                  <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full" style={{ backgroundColor: '#7C6AEF', color: 'white' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="8" height="9" rx="1"/><path d="M3 3V2a1 1 0 011-1h6a1 1 0 011 1v7a1 1 0 01-1 1H9"/></svg>
+                    Copy
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── Feature: Multi-Platform ── */}
       <section className="py-24 md:py-32 relative overflow-hidden">
         <KiteSVG className="absolute top-16 left-[2%] w-32" style={{ color: '#7C6AEF' }} />

@@ -11,10 +11,11 @@ export async function GET() {
   const userId = (session.user as { id: string }).id;
   const db = getDBProvider();
 
-  const [sources, outputs, mostUsedFormats] = await Promise.all([
+  const [sources, outputs, mostUsedFormats, user] = await Promise.all([
     db.getSourcesByUser(userId, 1000),
     db.getOutputsByUser(userId, 1000),
     db.getMostUsedFormats(userId, 5),
+    db.getUserById(userId),
   ]);
 
   const wordCount = sources.reduce((sum, s) => sum + ((s as unknown as { word_count?: number }).word_count ?? 0), 0);
@@ -28,5 +29,6 @@ export async function GET() {
     mostUsedFormats,
     wordCount,
     topPlatform,
+    monthlyRequestsUsed: user?.monthlyRequestsUsed ?? 0,
   });
 }
