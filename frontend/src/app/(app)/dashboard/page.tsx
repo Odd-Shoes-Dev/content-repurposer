@@ -610,7 +610,7 @@ export default function DashboardPage() {
           <motion.button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="w-full sm:w-auto px-10 py-4 rounded-sm text-base font-medium text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-10 py-4 rounded-sm text-base font-medium text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             style={{
               backgroundColor: 'var(--color-brand)',
               boxShadow: canGenerate ? '0 8px 30px rgba(124,106,239,0.3)' : 'none',

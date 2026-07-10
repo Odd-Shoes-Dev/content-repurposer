@@ -46,6 +46,10 @@ html, body {
   max-width: 100%;
 }
 
+button:not(:disabled), a, [role="button"] {
+  cursor: pointer !important;
+}
+
 /* Font size preference */
 html[data-font-size="small"]  { font-size: 12px; }
 html[data-font-size="medium"] { font-size: 14px; }
