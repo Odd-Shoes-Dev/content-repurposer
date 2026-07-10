@@ -256,11 +256,13 @@ export default function DashboardPage() {
   }
 
   function toggleEdit(format: OutputFormat) {
+    let wasSaving = false;
     setOutputs((prev) => prev.map((o) => {
       if (o.format !== format) return o;
-      if (o.isEditing) { toast('Changes saved', 'success'); return { ...o, isEditing: false }; }
+      if (o.isEditing) { wasSaving = true; return { ...o, isEditing: false }; }
       return { ...o, isEditing: true };
     }));
+    if (wasSaving) toast('Changes saved', 'success');
   }
 
   function updateEditContent(format: OutputFormat, text: string) {
