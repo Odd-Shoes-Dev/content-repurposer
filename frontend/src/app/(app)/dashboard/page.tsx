@@ -638,10 +638,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Remaining repurposes */}
-        {stats && (() => {
+        {stats && process.env.NODE_ENV !== 'development' && (() => {
           const limit = config.plans[planKey].monthlyRequests;
-          const used = stats.monthlyRequestsUsed;
-          const remaining = Math.max(0, limit - used);
+          const used = stats.monthlyRequestsUsed ?? 0;
+          const remaining = Number.isFinite(limit) && Number.isFinite(used) ? Math.max(0, limit - used) : null;
+          if (remaining === null) return null;
           const isLow = remaining <= 2;
           const isUnlimited = limit >= 99999;
           if (isUnlimited) return null;
