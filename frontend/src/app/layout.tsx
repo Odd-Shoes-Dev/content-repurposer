@@ -53,7 +53,7 @@ export const metadata: Metadata = {
       'Paste any content and instantly get LinkedIn posts, X threads, blog articles, video scripts, newsletters, and more — powered by AI.',
     images: [
       {
-        url: `${BASE_URL}/og-image.png`,
+        url: `${BASE_URL}/logo-1200x630.png`,
         width: 1200,
         height: 630,
         alt: 'Repurposer — AI Content Repurposing Tool',
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     title: 'Repurposer — Turn One Piece of Content Into Many',
     description:
       'Paste any content and instantly get LinkedIn posts, X threads, blog articles, video scripts, and more — powered by AI.',
-    images: [`${BASE_URL}/og-image.png`],
+    images: [`${BASE_URL}/logo-1200x630.png`],
   },
   robots: {
     index: true,
@@ -80,6 +80,15 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: BASE_URL,
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo-30x30.png', sizes: '30x30', type: 'image/png' },
+      { url: '/logo-64x64.png', sizes: '64x64', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/logo-300x300.png',
   },
 };
 
