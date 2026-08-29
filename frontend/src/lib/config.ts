@@ -4,7 +4,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL || '',
   nextAuthSecret: process.env.NEXTAUTH_SECRET || '',
   nextAuthUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-  defaultModel: process.env.DEFAULT_AI_MODEL || 'llama-3.3-70b-versatile',
+  defaultModel: process.env.DEFAULT_AI_MODEL || 'openai/gpt-oss-120b',
   maxTokens: parseInt(process.env.MAX_TOKENS || '16000', 10),
 
   paymentProvider: (process.env.PAYMENT_PROVIDER || 'whop') as 'whop',
