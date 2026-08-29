@@ -20,10 +20,67 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+const BASE_URL = 'https://repurposer.blueoxjobs.eu';
+
 export const metadata: Metadata = {
-  title: "Content Repurposer — Turn One Piece Into Many",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: 'Repurposer — Turn One Piece of Content Into Many',
+    template: '%s | Repurposer',
+  },
   description:
-    "Transform your content into blog posts, LinkedIn updates, Twitter threads, video scripts, newsletters, and more with AI.",
+    'Paste any content and instantly get LinkedIn posts, X threads, blog articles, video scripts, newsletters, carousels, and more — powered by AI. Create once, publish everywhere.',
+  keywords: [
+    'content repurposer',
+    'AI content tool',
+    'repurpose content',
+    'LinkedIn post generator',
+    'Twitter thread generator',
+    'content marketing AI',
+    'social media content generator',
+    'blog to LinkedIn',
+    'podcast to social media',
+  ],
+  authors: [{ name: 'Repurposer' }],
+  creator: 'Repurposer',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: BASE_URL,
+    siteName: 'Repurposer',
+    title: 'Repurposer — Turn One Piece of Content Into Many',
+    description:
+      'Paste any content and instantly get LinkedIn posts, X threads, blog articles, video scripts, newsletters, and more — powered by AI.',
+    images: [
+      {
+        url: `${BASE_URL}/og-image.png`,
+        width: 1200,
+        height: 630,
+        alt: 'Repurposer — AI Content Repurposing Tool',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Repurposer — Turn One Piece of Content Into Many',
+    description:
+      'Paste any content and instantly get LinkedIn posts, X threads, blog articles, video scripts, and more — powered by AI.',
+    images: [`${BASE_URL}/og-image.png`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: BASE_URL,
+  },
 };
 
 export default function RootLayout({
