@@ -81,6 +81,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: BASE_URL,
   },
+  verification: {
+    google: 'am_zgM36DUjGYnOA1ZPjaA-ipccfOzzaXmJNGI5j3Lw',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
